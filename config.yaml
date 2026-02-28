@@ -1,0 +1,205 @@
+# MCP Adapter Configuration
+# -----------------------------------------------------------------------------
+# ENV interpolation (recommended):
+#   - Any string may use ${ENV_VAR} or ${ENV_VAR:-default}
+#   - If you choose to support "ENV_FOO" shorthand in code, treat it as "read env FOO" ONLY.
+#     Do NOT implement fallback searching; fail-fast if required env is missing.
+#
+# Override precedence (most specific wins):
+#   adapter.* overrides server.tool_defaults overrides core.defaults
+#
+core:
+  # Network bind
+  host: "0.0.0.0"               # default: 0.0.0.0
+  port: 8932                    # default: 8932
+
+  # Logging: "debug" | "info" | "warning" | "error"
+  log_level: "warning"          # default: warning
+
+  # Startup behavior (useful in k8s readiness / dependency wait)
+  max_start_wait_seconds: 60    # default: 60 (0 = don't wait)
+
+  # Background maintenance
+  cleanup_interval_seconds: 60  # default: 60 (0 = disable background cleanup loop)
+
+  # Public base URL for constructing externally reachable URLs (uploads/artifacts).
+  # If null, derive from incoming request (Host / forwarded headers).
+  public_base_url: null         # default: null
+
+  # Upload endpoint base path (actual per-server endpoint becomes: {upload_path}/{server_id})
+  upload_path: "/upload"        # default: /upload
+
+  # Basic auth for the adapter itself (strongly recommended)
+  auth:
+    enabled: false              # default: false
+    header_name: "X-Mcp-Adapter-Auth-Token"  # default header name
+    token: null                 # set to "${MCP_ADAPTER_TOKEN}" (required if enabled=true)
+
+  # CORS (only relevant if browser clients call this directly)
+  cors:
+    enabled: false              # default: false (safer than "allow all")
+    allowed_origins: []         # default: [] meaning "none" unless enabled=true
+    allowed_methods: ["POST", "GET", "OPTIONS"]
+    allowed_headers: ["*"]
+    allow_credentials: false
+
+  # Global defaults applied to proxied tool calls unless overridden
+  defaults:
+    tool_call_timeout_seconds: 60  # default: 60
+    allow_raw_output: false        # default: false
+    # When allow_raw_output=true, adapter may include base64 file bytes in tool output
+    # for supported tools/adapters and will attempt to infer mime-type.
+
+storage:
+  # Root directory on a shared volume. Adapter will create subfolders:
+  #   {root}/uploads/...
+  #   {root}/artifacts/...
+  root: "/data/shared"          # default: /data/shared
+
+  # Maximum total bytes allowed under storage.root.
+  # null means "unlimited". You may support human units ("10Gi", "500Mi") in parsing.
+  max_size: null                # default: null
+
+  # Write strategy
+  # - atomic_writes=true means: write temp file + fsync + atomic rename (best-effort).
+  # - lock_mode controls concurrency safety across workers.
+  atomic_writes: true           # default: true
+  lock_mode: "file"             # "none" | "process" | "file"   (default: file)
+
+sessions:
+  # Sessions are keyed by "Mcp-Session-Id" header from the client.
+  # Limits (null = unlimited)
+  max_active: null              # default: null
+  max_in_flight_per_session: null  # default: null
+
+  # Idle session expiry. null disables expiry.
+  idle_ttl_seconds: null        # default: null
+
+  # Tombstone / revival behavior for expired sessions
+  allow_revival: true           # default: true
+  # How long to keep tombstoned session metadata around (uploads/artifacts may still expire separately).
+  tombstone_ttl_seconds: 86400  # default: 86400 (1 day)
+
+  # Per-session total storage quota across uploads + artifacts.
+  # null disables. When exceeded, eviction_policy decides what gets deleted first.
+  max_total_session_size: null  # default: null
+
+  # Eviction policy when max_total_session_size or per-area limits are exceeded.
+  # "lru_uploads_then_artifacts" is conservative for most flows.
+  eviction_policy: "lru_uploads_then_artifacts"   # "lru_uploads_then_artifacts" | "lru_artifacts_then_uploads"
+
+uploads:
+  enabled: true                 # default: true
+
+  # Maximum upload size per file. You may parse "10Mi"/"50Mi".
+  max_file_bytes: "10Mi"        # default: 10Mi
+
+  # TTL for uploaded files (LRU by last access). null disables expiry.
+  ttl_seconds: 120              # default: 120
+
+  # If true, client must provide sha256 for integrity (recommended for untrusted networks).
+  require_sha256: false         # default: false
+
+  # URI scheme returned to clients after upload
+  uri_scheme: "upload://"       # default: upload://
+
+artifacts:
+  enabled: true                 # default: true
+
+  # TTL for artifacts (LRU by last access). null disables expiry.
+  ttl_seconds: 600              # default: 600
+
+  # Max artifact count per session. null disables.
+  max_per_session: null         # default: null
+
+  # Whether artifacts should appear as session-scoped MCP resources.
+  expose_as_resources: true     # default: true
+
+  # URI scheme used to expose artifact references
+  uri_scheme: "artifact://"     # default: artifact://
+
+  # Naming strategy to prevent collisions on disk while keeping user-friendly filenames.
+  # Recommended pattern stores by artifact_id and preserves original name.
+  naming:
+    # Real on-disk layout:
+    #   {root}/artifacts/sessions/{session_id}/{artifact_id}/{filename}
+    # This guarantees no filename collision overwrites.
+    layout: "by_artifact_id"    # default: by_artifact_id
+    sanitize_filenames: true    # default: true
+
+servers:
+  # One entry per upstream MCP server you want to expose.
+  - id: "playwright"                          # required, unique
+    mount_path: "/mcp/playwright"             # required, where this server is mounted in adapter
+
+    upstream:
+      transport: "streamable_http"            # "streamable_http" | "sse"
+      url: "http://playwright-mcp:8931/mcp"   # required
+      insecure_tls: false                     # default: false (skip TLS verification only if true)
+
+      # Headers injected into upstream request (static), useful for upstream auth.
+      static_headers: {}                      # default: {}
+
+      # Client header policy
+      client_headers:
+        # If set, client must include these headers on every request to the adapter.
+        required: []                          # default: []
+        # These client headers may be forwarded upstream. Default deny.
+        passthrough: []                       # default: []
+
+    # Server-level defaults for tools on this upstream (override core.defaults)
+    tool_defaults:
+      tool_call_timeout_seconds: null         # default: null -> use core.defaults
+      allow_raw_output: null                  # default: null -> use core.defaults
+
+    adapters:
+      # -----------------------------------------------------------------------
+      # Upload consumer adapter:
+      # - Intercepts tool calls that need file paths.
+      # - Rewrites upload:// handles to real server-side absolute paths.
+      # -----------------------------------------------------------------------
+      - type: "upload_consumer"
+        tools: ["browser_file_upload"]        # list of tool names to wrap
+        # The argument name (or dot-path) where file paths are passed.
+        # Supports string or list; adapter preserves the original shape.
+        file_path_argument: "paths"           # required
+        uri_scheme: "upload://"               # default: upload://
+
+        overrides:
+          tool_call_timeout_seconds: null     # default: null -> server/tool defaults
+          allow_raw_output: null              # default: null -> server/tool defaults
+
+      # -----------------------------------------------------------------------
+      # Artifact producer adapter:
+      # - Intercepts tool calls that produce files (screenshots, PDFs, exports).
+      # - Ensures the file is persisted into adapter storage and optionally exposed
+      #   as a session-scoped MCP resource with artifact:// URI.
+      # -----------------------------------------------------------------------
+      - type: "artifact_producer"
+        tools: ["browser_take_screenshot", "browser_pdf_save"]
+
+        # If the upstream tool accepts an output filename/path parameter, set it here
+        # so adapter can force output into its controlled location.
+        # If null, adapter will locate output via output_locator rules and then move/copy.
+        output_path_argument: "filename"      # set to null if upstream tool cannot accept an output path
+
+        # How to locate the produced file when output_path_argument is null OR upstream ignores it.
+        # Modes:
+        #   - "structured": read a path from structured tool output using output_path_key
+        #   - "regex": extract a path from text output using output_path_regexes
+        #   - "embedded": extract embedded bytes/content from tool output and write to artifact
+        #   - "none": do not attempt to persist (tool will pass through)
+        output_locator:
+          mode: "structured"                  # "structured" | "regex" | "embedded" | "none"
+          output_path_key: null               # e.g. "path" or "result.file.path" (dot-path); required if mode=structured
+          output_path_regexes: []             # list of regex patterns; used if mode=regex
+          embedded_mime_hint: null            # optional mime hint if mode=embedded
+
+        # Artifact persistence behavior
+        persist: true                         # default: true
+        expose_as_resource: true              # default: true (can override artifacts.expose_as_resources per adapter)
+        include_raw_output: null              # default: null -> respect allow_raw_output decision chain
+
+        overrides:
+          tool_call_timeout_seconds: null
+          allow_raw_output: null

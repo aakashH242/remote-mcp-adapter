@@ -1,0 +1,56 @@
+networks:
+  playwright-mcp-network:
+    driver: bridge
+
+services:
+  playwright:
+    user: "${DOCKER_UID:-1000}:${DOCKER_GID:-1000}"
+    image: mcr.microsoft.com/playwright/mcp:v0.0.52
+    pull_policy: always
+    container_name: playwright
+    command:
+      - --headless
+      - --browser
+      - chromium
+      - --port
+      - "8931"
+      - --allowed-hosts
+      - "*"
+      - --host
+      - 0.0.0.0
+      - --caps
+      - "pdf,vision,testing,tracing"
+      - --isolated
+      - --no-sandbox
+      - --output-dir
+      - /shared
+    ports:
+      - "8931:8931"
+    volumes:
+      - ./data:/shared
+    restart: "no"
+    networks:
+      - playwright-mcp-network
+#
+#  wrapper:
+#    user: "${DOCKER_UID:-1000}:${DOCKER_GID:-1000}"
+#    build: .
+#    container_name: playwright-wrapper
+#    environment:
+#      UPSTREAM_MCP_URL: "http://playwright:8931/mcp"
+#      WRAPPER_HOST: "0.0.0.0"
+#      WRAPPER_PORT: "8932"
+#      LOG_LEVEL: "info"
+#      FILE_LRU_TTL_SECONDS: "60"
+#      CLEANUP_INTERVAL_SECONDS: "15"
+#      TOOL_CALL_TIMEOUT_SECONDS: "60"
+#    ports:
+#      - "8932:8932"
+#    volumes:
+#      - ./data:/shared
+#    depends_on:
+#      - playwright
+#    restart: "no"
+#    networks:
+#      - playwright-mcp-network
+#

@@ -1,0 +1,1 @@
+{"detail":"Forbidden: missing or invalid adapter auth token. Please check auth token header 'X-Mcp-Adapter-Auth-Token'."}
