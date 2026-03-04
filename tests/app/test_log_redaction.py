@@ -116,3 +116,21 @@ def test_install_log_redaction_filter_attaches_to_existing_handlers():
         test_logger.filters.clear()
 
     assert redaction_filter in handler.filters
+
+
+def test_install_log_redaction_filter_is_idempotent_for_handlers():
+    logger_name = "tests.log_redaction_idempotent"
+    test_logger = logging.getLogger(logger_name)
+    test_logger.handlers.clear()
+    test_logger.filters.clear()
+    handler = logging.StreamHandler()
+    test_logger.addHandler(handler)
+    try:
+        first_filter = install_log_redaction_filter(config=_build_config())
+        second_filter = install_log_redaction_filter(config=_build_config())
+    finally:
+        test_logger.handlers.clear()
+        test_logger.filters.clear()
+
+    assert first_filter is second_filter
+    assert handler.filters.count(first_filter) == 1

@@ -48,7 +48,7 @@ def build_artifact_download_path(
 
 
 def derive_public_base_url(config: AdapterConfig, context: Context | None = None) -> str:
-    """Resolve public base URL from config first, then current HTTP request, then host/port.
+    """Resolve public base URL from config first, then request base URL, then host/port.
 
     Args:
         config: Full adapter configuration.
@@ -65,10 +65,6 @@ def derive_public_base_url(config: AdapterConfig, context: Context | None = None
         request = context.request_context.request
 
     if request is not None:
-        forwarded_scheme = request.headers.get("x-forwarded-proto")
-        forwarded_host = request.headers.get("x-forwarded-host")
-        if forwarded_scheme and forwarded_host:
-            return f"{forwarded_scheme}://{forwarded_host}".rstrip("/")
         return str(request.base_url).rstrip("/")
 
     host = config.core.host

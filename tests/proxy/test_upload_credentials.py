@@ -88,7 +88,14 @@ async def test_issue_returns_empty_dict_when_disabled():
     manager = uc.UploadCredentialManager(enabled=False, secret="sec", ttl_seconds=10, telemetry=telemetry)
     issued = await manager.issue(server_id="s", session_id="sess")
     assert issued == {}
-    assert telemetry.credential_events[-1]["result"] == "disabled"
+    assert telemetry.credential_events == [
+        {
+            "operation": "issue",
+            "result": "disabled",
+            "backend": "memory",
+            "server_id": "s",
+        }
+    ]
 
 
 @pytest.mark.asyncio
@@ -109,8 +116,28 @@ async def test_issue_retries_on_collision_then_succeeds(monkeypatch):
         "mcp_upload_nonce": "nonce_b",
         "mcp_upload_sig": expected_signature,
     }
-    assert [event["result"] for event in telemetry.nonce_events] == ["collision", "success"]
-    assert telemetry.credential_events[-1]["result"] == "issued"
+    assert telemetry.nonce_events == [
+        {
+            "operation": "reserve",
+            "result": "collision",
+            "backend": "fake",
+            "server_id": "srv",
+        },
+        {
+            "operation": "reserve",
+            "result": "success",
+            "backend": "fake",
+            "server_id": "srv",
+        },
+    ]
+    assert telemetry.credential_events == [
+        {
+            "operation": "issue",
+            "result": "issued",
+            "backend": "fake",
+            "server_id": "srv",
+        }
+    ]
 
 
 @pytest.mark.asyncio
@@ -126,8 +153,18 @@ async def test_issue_raises_after_retry_exhaustion(monkeypatch):
         await manager.issue(server_id="srv", session_id="sess")
 
     assert len(store.reserve_calls) == 5
-    assert [event["result"] for event in telemetry.nonce_events] == ["collision"] * 5
-    assert telemetry.credential_events[-1]["result"] == "reserve_failed"
+    assert all(event["operation"] == "reserve" for event in telemetry.nonce_events)
+    assert all(event["result"] == "collision" for event in telemetry.nonce_events)
+    assert all(event["backend"] == "fake" for event in telemetry.nonce_events)
+    assert all(event["server_id"] == "srv" for event in telemetry.nonce_events)
+    assert telemetry.credential_events == [
+        {
+            "operation": "issue",
+            "result": "reserve_failed",
+            "backend": "fake",
+            "server_id": "srv",
+        }
+    ]
 
 
 @pytest.mark.asyncio

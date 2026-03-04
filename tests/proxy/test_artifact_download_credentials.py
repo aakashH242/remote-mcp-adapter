@@ -126,6 +126,23 @@ def test_validate_returns_false_for_expired(monkeypatch):
     )
 
 
+def test_validate_accepts_when_expiry_equals_current_time(monkeypatch):
+    manager = adc.ArtifactDownloadCredentialManager(enabled=True, secret="sec", ttl_seconds=10)
+    monkeypatch.setattr(adc.time, "time", lambda: 200)
+    signature = manager._sign(server_id="s", session_id="sess", artifact_id="a1", filename="f.txt", expires_at=200)
+
+    assert (
+        manager.validate(
+            server_id="s",
+            session_id="sess",
+            artifact_id="a1",
+            filename="f.txt",
+            query_params={"mcp_artifact_exp": "200", "mcp_artifact_sig": signature},
+        )
+        is True
+    )
+
+
 def test_validate_returns_false_for_bad_signature(monkeypatch):
     manager = adc.ArtifactDownloadCredentialManager(enabled=True, secret="sec", ttl_seconds=10)
     monkeypatch.setattr(adc.time, "time", lambda: 100)
@@ -137,6 +154,23 @@ def test_validate_returns_false_for_bad_signature(monkeypatch):
             artifact_id="a1",
             filename="f.txt",
             query_params={"mcp_artifact_exp": "110", "mcp_artifact_sig": "wrong"},
+        )
+        is False
+    )
+
+
+def test_validate_returns_false_when_artifact_identity_changes(monkeypatch):
+    manager = adc.ArtifactDownloadCredentialManager(enabled=True, secret="sec", ttl_seconds=10)
+    monkeypatch.setattr(adc.time, "time", lambda: 100)
+    signature = manager._sign(server_id="s", session_id="sess", artifact_id="a1", filename="f.txt", expires_at=110)
+
+    assert (
+        manager.validate(
+            server_id="s",
+            session_id="sess",
+            artifact_id="a2",
+            filename="f.txt",
+            query_params={"mcp_artifact_exp": "110", "mcp_artifact_sig": signature},
         )
         is False
     )

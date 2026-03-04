@@ -40,13 +40,13 @@ def test_derive_public_base_url_prefers_config_value_and_strips_trailing_slash()
     assert derive_public_base_url(config) == "https://public.example.com"
 
 
-def test_derive_public_base_url_uses_forwarded_headers_when_available():
+def test_derive_public_base_url_ignores_forwarded_headers():
     config = _config(public_base_url="")
     context = _context_with_request(
         headers={"x-forwarded-proto": "https", "x-forwarded-host": "edge.example.com"},
         base_url="http://internal.local:8080/",
     )
-    assert derive_public_base_url(config, context) == "https://edge.example.com"
+    assert derive_public_base_url(config, context) == "http://internal.local:8080"
 
 
 def test_derive_public_base_url_uses_request_base_url_without_forwarded_headers():
