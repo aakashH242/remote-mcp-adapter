@@ -5,10 +5,12 @@ on:
     branches: [main]
     paths-ignore:
       - CHANGELOG.md
+      - .github/badges/coverage-badge.json
   workflow_dispatch:
 
 permissions:
   contents: write
+  pull-requests: write
 
 jobs:
   update-coverage-badge:
@@ -75,15 +77,14 @@ jobs:
           print(payload)
           PY
 
-      - name: Commit badge update
-        run: |
-          if git diff --quiet .github/badges/coverage-badge.json; then
-            echo 'No badge changes.'
-            exit 0
-          fi
-
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add .github/badges/coverage-badge.json
-          git commit -m "chore: update coverage badge"
-          git push
+      - name: Open badge update PR
+        uses: peter-evans/create-pull-request@v7
+        with:
+          add-paths: .github/badges/coverage-badge.json
+          branch: chore/update-coverage-badge
+          commit-message: "chore: update coverage badge"
+          title: "chore: update coverage badge"
+          body: |
+            Automated coverage badge refresh based on current test coverage.
+          labels: documentation
+          delete-branch: true

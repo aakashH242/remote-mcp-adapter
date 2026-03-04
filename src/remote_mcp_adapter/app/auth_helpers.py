@@ -17,6 +17,23 @@ _PUBLIC_UNPROTECTED_PATHS = (
 )
 
 
+def upload_prefix_parts(upload_path_prefix: str) -> tuple[str, str]:
+    """Return normalized upload prefix and its segment-safe match prefix.
+
+    Args:
+        upload_path_prefix: Configured upload prefix, with or without trailing slash.
+
+    Returns:
+        Tuple ``(normalized_prefix, match_prefix)`` where:
+        - ``normalized_prefix`` has no trailing slash (except root ``/``).
+        - ``match_prefix`` enforces segment boundaries for ``startswith`` checks.
+    """
+    normalized_prefix = upload_path_prefix.rstrip("/") or "/"
+    if normalized_prefix == "/":
+        return normalized_prefix, normalized_prefix
+    return normalized_prefix, f"{normalized_prefix}/"
+
+
 def is_public_unprotected_path(path: str) -> bool:
     """Return True when path is always public and bypasses auth/session headers.
 
@@ -65,8 +82,8 @@ def route_group_for_metrics(path: str, *, upload_path_prefix: str) -> str:
     """
     if path.startswith(ARTIFACT_PATH_PREFIX):
         return "/artifacts/{server_id}/{session_id}/{artifact_id}/{filename}"
-    if path.startswith(upload_path_prefix):
-        normalized_upload_prefix = upload_path_prefix.rstrip("/") or "/"
+    normalized_upload_prefix, upload_match_prefix = upload_prefix_parts(upload_path_prefix)
+    if path.startswith(upload_match_prefix):
         if normalized_upload_prefix == "/":
             return "/{server_id}"
         return f"{normalized_upload_prefix}/{{server_id}}"

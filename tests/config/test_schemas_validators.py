@@ -61,6 +61,8 @@ def test_core_config_validators():
     assert cfg.log_level == "info"
     with pytest.raises(ValueError, match="core.log_level must be one of"):
         CoreConfig(log_level="verbose")
+    with pytest.raises(ValueError, match=r"core\.upload_path cannot be '/'"):
+        CoreConfig(upload_path="/")
 
 
 def test_telemetry_validators_and_defaults():

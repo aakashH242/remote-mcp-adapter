@@ -136,6 +136,7 @@ def test_telemetry_server_id_for_path_and_known_servers(monkeypatch):
 
     assert mr._telemetry_server_id_for_path(path="/upload/s1", mount_path_to_server_id=mounts, upload_path_prefix="/upload", known_server_ids=known) == "s1"
     assert mr._telemetry_server_id_for_path(path="/upload/sx", mount_path_to_server_id=mounts, upload_path_prefix="/upload", known_server_ids=known) == "unknown"
+    assert mr._telemetry_server_id_for_path(path="/uploadx/s1", mount_path_to_server_id=mounts, upload_path_prefix="/upload", known_server_ids=known) == "global"
     assert mr._telemetry_server_id_for_path(path="/public", mount_path_to_server_id=mounts, upload_path_prefix="/upload", known_server_ids=known) == "global"
 
     ctx = _context()
@@ -214,7 +215,10 @@ async def test_evaluate_signed_upload_auth_paths(monkeypatch):
     req = _request(path="/public")
     assert await mr._evaluate_signed_upload_auth(context=ctx, request=req, route_group="/g", telemetry_server_id="s1") == (False, None)
 
-    req_upload = _request(path="/upload/s1", headers={"mcp-session-id": "sess"}, query={})
+    req_upload_get = _request(path="/upload/s1", method="GET", headers={"mcp-session-id": "sess"}, query={})
+    assert await mr._evaluate_signed_upload_auth(context=ctx, request=req_upload_get, route_group="/g", telemetry_server_id="s1") == (False, None)
+
+    req_upload = _request(path="/upload/s1", method="POST", headers={"mcp-session-id": "sess"}, query={})
     ctx.resolved_config.core.auth.enabled = False
     assert await mr._evaluate_signed_upload_auth(context=ctx, request=req_upload, route_group="/g", telemetry_server_id="s1") == (False, None)
 
@@ -235,6 +239,10 @@ async def test_evaluate_signed_upload_auth_paths(monkeypatch):
     ctx.upload_credentials = _UploadCreds(enabled=True, raises=True)
     bad2, resp2 = await mr._evaluate_signed_upload_auth(context=ctx, request=req_upload, route_group="/g", telemetry_server_id="s1")
     assert bad2 is False and isinstance(resp2, JSONResponse) and resp2.status_code == 503
+
+    ctx.upload_path_prefix = "/upload"
+    req_non_upload = _request(path="/uploadx/s1", method="POST", headers={"mcp-session-id": "sess"}, query={})
+    assert await mr._evaluate_signed_upload_auth(context=ctx, request=req_non_upload, route_group="/g", telemetry_server_id="s1") == (False, None)
 
 
 @pytest.mark.asyncio
