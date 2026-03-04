@@ -3,8 +3,12 @@ name: Docker
 on:
   pull_request:
     branches: [main]
+    paths-ignore:
+      - CHANGELOG.md
   push:
     branches: [main]
+    paths-ignore:
+      - CHANGELOG.md
   release:
     types: [published]
 

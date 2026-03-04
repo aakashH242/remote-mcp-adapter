@@ -3,8 +3,12 @@ name: Docs
 on:
   pull_request:
     branches: [main]
+    paths-ignore:
+      - CHANGELOG.md
   push:
     branches: [main]
+    paths-ignore:
+      - CHANGELOG.md
 
 permissions:
   contents: read

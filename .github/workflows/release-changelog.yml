@@ -1,0 +1,94 @@
+name: Release Changelog
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  update-changelog:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Update CHANGELOG.md with release notes
+        id: changelog
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+          RELEASE_NAME: ${{ github.event.release.name }}
+          RELEASE_URL: ${{ github.event.release.html_url }}
+          RELEASE_PUBLISHED_AT: ${{ github.event.release.published_at }}
+          RELEASE_BODY: ${{ github.event.release.body }}
+        run: |
+          set -euo pipefail
+
+          release_date="${RELEASE_PUBLISHED_AT%%T*}"
+          release_heading="## ${RELEASE_TAG} - ${release_date}"
+          safe_tag="$(echo "${RELEASE_TAG}" | sed 's/[^A-Za-z0-9._-]/-/g')"
+          echo "safe_tag=${safe_tag}" >> "$GITHUB_OUTPUT"
+
+          if [ -f CHANGELOG.md ] && grep -Fq "${release_heading}" CHANGELOG.md; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if [ ! -f CHANGELOG.md ]; then
+            printf "# Changelog\n\nAll notable changes to this project are documented in this file.\n" > CHANGELOG.md
+          fi
+
+          if ! grep -q '^# Changelog' CHANGELOG.md; then
+            {
+              echo "# Changelog"
+              echo
+              cat CHANGELOG.md
+            } > CHANGELOG.md.new
+            mv CHANGELOG.md.new CHANGELOG.md
+          fi
+
+          {
+            echo "${release_heading}"
+            echo
+            if [ -n "${RELEASE_NAME}" ]; then
+              echo "**Release:** ${RELEASE_NAME}"
+              echo
+            fi
+            echo "- Tag: [\`${RELEASE_TAG}\`](${RELEASE_URL})"
+            if printf "%s" "${RELEASE_BODY}" | tr -d '[:space:]' | grep -q .; then
+              echo
+              printf "%s\n" "${RELEASE_BODY}" | sed 's/\r$//'
+            else
+              echo "- Notes: Release published on GitHub."
+            fi
+          } > release-entry.md
+
+          {
+            head -n 1 CHANGELOG.md
+            echo
+            cat release-entry.md
+            echo
+            tail -n +2 CHANGELOG.md
+          } > CHANGELOG.md.new
+          mv CHANGELOG.md.new CHANGELOG.md
+          rm -f release-entry.md
+
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+
+      - name: Open changelog PR
+        if: steps.changelog.outputs.changed == 'true'
+        uses: peter-evans/create-pull-request@v7
+        with:
+          add-paths: CHANGELOG.md
+          branch: chore/changelog-${{ steps.changelog.outputs.safe_tag }}
+          commit-message: "docs(changelog): add release ${{ github.event.release.tag_name }}"
+          title: "docs(changelog): add release ${{ github.event.release.tag_name }}"
+          body: |
+            Automated changelog update for release `${{ github.event.release.tag_name }}`.
+          labels: documentation
+          delete-branch: true
