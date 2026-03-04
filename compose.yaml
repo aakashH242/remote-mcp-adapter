@@ -1,0 +1,51 @@
+networks:
+  remote-mcp-adapter-network:
+    driver: bridge
+
+services:
+  playwright:
+    user: 1000:1000
+    image: mcr.microsoft.com/playwright/mcp:v0.0.68
+    pull_policy: always
+    container_name: playwright
+    command:
+      - --headless
+      - --browser
+      - chromium
+      - --port
+      - "8931"
+      - --allowed-hosts
+      - "*"
+      - --host
+      - 0.0.0.0
+      - --caps
+      - "pdf"
+      - --isolated
+      - --no-sandbox
+      - --output-dir
+      - /shared
+      - --image-responses
+      - omit
+      - --allow-unrestricted-file-access
+    ports:
+      - "8931"
+    volumes:
+      - ./data:/shared
+    restart: "unless-stopped"
+    networks:
+      - remote-mcp-adapter-network
+
+  remote-mcp-adapter:
+    user: 1000:1000
+    build: .
+    container_name: remote-mcp-adapter
+    ports:
+      - "8932:8932"
+    volumes:
+      - ./data:/shared
+      - ./config.yaml:/etc/config.yaml
+    depends_on:
+      - playwright
+    restart: "unless-stopped"
+    networks:
+      - remote-mcp-adapter-network

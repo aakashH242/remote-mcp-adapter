@@ -1,0 +1,44 @@
+core:
+  log_level: "info"
+  allow_artifacts_download: true
+  upstream_metadata_cache_ttl_seconds: 60
+  upstream_ping:
+    enabled: true
+    interval_seconds: 3
+    timeout_seconds: 3
+    failure_threshold: 1
+    open_cooldown_seconds: 5
+    half_open_probe_allowance: 1
+
+storage:
+  root: "/shared"
+  lock_mode: "auto"
+
+sessions:
+  upstream_session_termination_retries: 3
+  idle_ttl_seconds: 180
+
+uploads:
+  ttl_seconds: 180
+
+artifacts:
+  ttl_seconds: 180
+
+servers:
+  - id: "playwright"
+    mount_path: "/mcp/playwright"
+    upstream:
+      transport: "streamable_http"
+      url: "http://playwright:8931/mcp"
+      insecure_tls: true
+
+    adapters:
+      - type: "upload_consumer"
+        tools: ["browser_file_upload"]
+        file_path_argument: "paths"
+
+      - type: "artifact_producer"
+        tools: ["browser_take_screenshot", "browser_pdf_save"]
+        output_path_argument: "filename"
+        output_locator:
+          mode: "regex"

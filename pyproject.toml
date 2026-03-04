@@ -1,0 +1,70 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "remote-mcp-adapter"
+version = "0.1.0"
+description = "Provides stateful mediation for remote MCP servers, including upload staging and automatic exposure of tool-generated files as session-scoped MCP resources."
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "fastmcp==3.0.2",
+    "fastapi>=0.133.1",
+    "uvicorn>=0.41.0",
+    "pyyaml>=6.0.3",
+  "redis>=7.2.1",
+  "opentelemetry-api>=1.39.0",
+  "opentelemetry-sdk>=1.39.0",
+  "opentelemetry-exporter-otlp-proto-grpc>=1.39.0",
+  "opentelemetry-exporter-otlp-proto-http>=1.39.0"
+]
+
+[dependency-groups]
+dev = [
+  "black>=24.8.0",
+  "ruff>=0.6.9",
+  "mypy>=1.11.2",
+  "pytest>=9.0.2",
+  "pytest-asyncio>=0.24.0",
+  "pytest-cov>=5.0.0",
+  "pre-commit>=4.3.0"
+]
+
+[project.scripts]
+remote-mcp-adapter = "remote_mcp_adapter.__main__:main"
+lint = "remote_mcp_adapter.scripts.lint:main"
+
+[tool.uv]
+package = true
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/remote_mcp_adapter"]
+
+[tool.hatch.build.targets.sdist]
+include = ["src/remote_mcp_adapter", "README.md"]
+
+[tool.black]
+line-length = 128
+target-version = ["py312"]
+
+[tool.ruff]
+line-length = 128
+target-version = "py312"
+src = ["src"]
+
+[tool.ruff.lint]
+select = ["E", "F"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*.py" = ["E402"]
+
+[tool.mypy]
+python_version = "3.12"
+ignore_missing_imports = true
+warn_unused_ignores = false
+show_error_codes = true
+disable_error_code = ["arg-type", "call-overload",
+    "annotation-unchecked", "return-value",
+    "assignment", "attr-defined", "import-untyped",
+"operator", "union-attr"]

@@ -1,0 +1,23 @@
+repos:
+  - repo: local
+    hooks:
+      - id: lint
+        name: lint (black -> ruff -> mypy)
+        entry: uv run lint
+        language: system
+        pass_filenames: false
+        stages: [pre-commit]
+
+      - id: test-coverage
+        name: tests with coverage (>=80%)
+        entry: uv run pytest --cov=src/remote_mcp_adapter --cov-report=term-missing --cov-fail-under=80
+        language: system
+        pass_filenames: false
+        stages: [pre-commit]
+
+      - id: lint-fix
+        name: lint --fix (ruff autofix)
+        entry: uv run lint --fix
+        language: system
+        pass_filenames: false
+        stages: [manual]
