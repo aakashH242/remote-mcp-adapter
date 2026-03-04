@@ -22,6 +22,7 @@ def test_public_and_oauth_path_helpers_and_route_groups():
     assert ah.route_group_for_metrics("/artifacts/s/sess/a/f.txt", upload_path_prefix="/upload") == "/artifacts/{server_id}/{session_id}/{artifact_id}/{filename}"
     assert ah.route_group_for_metrics("/upload/s", upload_path_prefix="/upload") == "/upload/{server_id}"
     assert ah.route_group_for_metrics("/upload/s", upload_path_prefix="/upload/") == "/upload/{server_id}"
+    assert ah.route_group_for_metrics("/uploadx/s", upload_path_prefix="/upload") == "/uploadx/s"
     assert ah.route_group_for_metrics("/uploadx/s", upload_path_prefix="/upload/") == "/uploadx/s"
     assert ah.route_group_for_metrics("/docs", upload_path_prefix="/upload") == "/docs"
     assert ah.route_group_for_metrics("/.well-known/openid-configuration", upload_path_prefix="/upload") == "/.well-known/*"

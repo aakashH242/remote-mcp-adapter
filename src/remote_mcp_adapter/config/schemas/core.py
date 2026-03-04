@@ -103,8 +103,14 @@ class CoreConfig(BaseModel):
 
         Returns:
             Normalized path.
+
+        Raises:
+            ValueError: If the normalized path is the root path ("/").
         """
-        return normalize_path(value, "core.upload_path")
+        normalized = normalize_path(value, "core.upload_path")
+        if normalized == "/":
+            raise ValueError("core.upload_path cannot be '/', please use a non-root path such as '/upload'")
+        return normalized
 
     @field_validator("log_level")
     @classmethod

@@ -82,7 +82,7 @@ def build_healthz_payload(
     has_error = has_upstream_error or wiring_not_ready or has_persistence_error
     payload: dict[str, object] = {
         "status": "ok" if not has_error else "degraded",
-        "package": "mcp_general_adapter",
+        "package": "remote_mcp_adapter",
         "servers": checks,
         "persistence": persistence,
     }

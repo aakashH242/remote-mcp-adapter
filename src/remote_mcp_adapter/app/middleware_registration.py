@@ -14,6 +14,7 @@ from ..constants import GLOBAL_SERVER_ID, MCP_SESSION_ID_HEADER, UNKNOWN_SERVER_
 from ..core import PersistenceUnavailableError
 from ..proxy.cancellation import ProxySessionContext, parse_mcp_envelope
 from .auth_helpers import (
+    upload_prefix_parts,
     is_oauth_discovery_path,
     is_public_unprotected_path,
     parse_artifact_download_path,
@@ -57,8 +58,9 @@ def _telemetry_server_id_for_path(
         artifact_server_id = artifact_path[0]
         return artifact_server_id if artifact_server_id in known_server_ids else UNKNOWN_SERVER_ID
 
-    if path.startswith(upload_path_prefix):
-        relative_path = path[len(upload_path_prefix) :].lstrip("/")
+    _, upload_match_prefix = upload_prefix_parts(upload_path_prefix)
+    if path.startswith(upload_match_prefix):
+        relative_path = path[len(upload_match_prefix) :].lstrip("/")
         upload_server_id = relative_path.split("/", 1)[0] if relative_path else ""
         if upload_server_id:
             return upload_server_id if upload_server_id in known_server_ids else UNKNOWN_SERVER_ID
@@ -228,7 +230,12 @@ async def _evaluate_signed_upload_auth(
         - ``(False, response)`` when upload path requires signed auth but is rejected.
         - ``(False, None)`` when signed-upload auth does not apply for this request.
     """
-    is_upload_path = request.url.path.startswith(context.upload_path_prefix)
+    normalized_upload_prefix, upload_match_prefix = upload_prefix_parts(context.upload_path_prefix)
+    if normalized_upload_prefix == "/":
+        return False, None
+    if request.method.upper() != "POST":
+        return False, None
+    is_upload_path = request.url.path.startswith(upload_match_prefix)
     if not is_upload_path:
         return False, None
     if not context.resolved_config.core.auth.enabled:
@@ -236,7 +243,7 @@ async def _evaluate_signed_upload_auth(
     if context.upload_credentials is None or not context.upload_credentials.enabled:
         return False, None
 
-    relative_path = request.url.path[len(context.upload_path_prefix) :].lstrip("/")
+    relative_path = request.url.path[len(upload_match_prefix) :].lstrip("/")
     upload_server_id = relative_path.split("/", 1)[0] if relative_path else ""
     session_id = request.headers.get(MCP_SESSION_ID_HEADER)
     credential_valid = False
