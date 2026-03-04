@@ -39,6 +39,9 @@ async def test_embedded_extract_and_materialize(tmp_path, monkeypatch):
     image_res = ToolResult(content=[ImageContent(type="image", data="YWJj", mimeType="image/png")], structured_content={}, meta={})
     data, mime = await ap._extract_embedded_bytes(image_res)
     assert data == b"abc" and mime == "image/png"
+    jpeg_res = ToolResult(content=[ImageContent(type="image", data="YWJj", mimeType="image/jpeg")], structured_content={}, meta={})
+    data_jpeg, mime_jpeg = await ap._extract_embedded_bytes(jpeg_res)
+    assert data_jpeg == b"abc" and mime_jpeg == "image/jpeg"
 
     blob_res = ToolResult(
         content=[

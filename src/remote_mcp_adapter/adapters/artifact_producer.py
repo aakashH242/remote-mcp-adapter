@@ -241,7 +241,10 @@ async def _extract_embedded_bytes(result: ToolResult) -> tuple[bytes, str | None
     """
     for block in result.content:
         if isinstance(block, ImageContent):
-            return await asyncio.to_thread(_decode_base64, block.data), "image/png"
+            mime_type = getattr(block, "mimeType", None)
+            if not isinstance(mime_type, str) or not mime_type.strip():
+                mime_type = "image/png"
+            return await asyncio.to_thread(_decode_base64, block.data), mime_type
         if isinstance(block, EmbeddedResource):
             if isinstance(block.resource, BlobResourceContents):
                 return await asyncio.to_thread(_decode_base64, block.resource.blob), block.resource.mimeType

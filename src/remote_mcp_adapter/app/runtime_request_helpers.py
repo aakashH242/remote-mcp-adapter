@@ -10,7 +10,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from ..constants import ARTIFACT_PATH_PREFIX, DEFAULT_ADAPTER_AUTH_HEADER
 from ..config import AdapterConfig
 from ..config.load import load_config
-from ..proxy.upload_helpers import build_server_upload_path
 
 
 def validate_adapter_auth(request: Request, config: AdapterConfig) -> None:
@@ -73,31 +72,42 @@ def resolve_config(config: AdapterConfig | None, config_path: str | None) -> Ada
 
 
 def resolve_server_id_for_path(path: str, mount_path_to_server_id: dict[str, str]) -> str | None:
-    """Return the server ID whose mount path is a prefix of path, or None.
+    """Return the best matching server ID for path, or None.
 
     Args:
         path: Request URL path.
         mount_path_to_server_id: Mapping of mount paths to server identifiers.
 
     Returns:
-        First matching server ID, or None.
+        Server ID for the most specific matching mount path, or None.
     """
+    best_match: tuple[int, str] | None = None
     for mount_path, server_id in mount_path_to_server_id.items():
-        if path.startswith(mount_path):
-            return server_id
-    return None
+        is_exact_match = path == mount_path
+        is_child_path_match = path.startswith(f"{mount_path}/")
+        if not (is_exact_match or is_child_path_match):
+            continue
+        candidate = (len(mount_path), server_id)
+        if best_match is None or candidate[0] > best_match[0]:
+            best_match = candidate
+    if best_match is None:
+        return None
+    return best_match[1]
 
 
 def upload_path_prefix(upload_path: str) -> str:
-    """Strip the placeholder segment from an upload path to get the bare prefix.
+    """Return normalized upload route prefix for server-scoped upload endpoints.
 
     Args:
-        upload_path: Full upload route template with a server-id placeholder.
+        upload_path: Configured upload base path.
 
     Returns:
-        Upload route prefix without the trailing placeholder.
+        Upload route prefix ending with ``/`` for unambiguous prefix matching.
     """
-    return build_server_upload_path(upload_path, "")
+    base = upload_path if upload_path.startswith("/") else f"/{upload_path}"
+    if base == "/":
+        return "/"
+    return f"{base.rstrip('/')}/"
 
 
 def is_stateful_request_path(

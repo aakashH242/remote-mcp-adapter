@@ -30,11 +30,29 @@ def test_default_upload_workflow_text_includes_tool_name():
 
 def test_load_upload_workflow_text_uses_file_and_replaces_tool_name(tmp_path, monkeypatch):
     doc = tmp_path / "upload_workflow.md"
-    doc.write_text("call get_upload_url now", encoding="utf-8")
+    doc.write_text("call {{UPLOAD_TOOL_NAME}} now", encoding="utf-8")
     monkeypatch.setattr(lr, "_upload_workflow_doc_path", lambda: doc)
 
     text = lr._load_upload_workflow_text("my_tool")
     assert text == "call my_tool now"
+
+
+def test_load_upload_workflow_text_legacy_placeholder_replacement(tmp_path, monkeypatch):
+    doc = tmp_path / "upload_workflow.md"
+    doc.write_text("call `get_upload_url` now", encoding="utf-8")
+    monkeypatch.setattr(lr, "_upload_workflow_doc_path", lambda: doc)
+
+    text = lr._load_upload_workflow_text("my_tool")
+    assert text == "call `my_tool` now"
+
+
+def test_load_upload_workflow_text_does_not_double_prefix_existing_tool_names(tmp_path, monkeypatch):
+    doc = tmp_path / "upload_workflow.md"
+    doc.write_text("example `playwright_get_upload_url` usage", encoding="utf-8")
+    monkeypatch.setattr(lr, "_upload_workflow_doc_path", lambda: doc)
+
+    text = lr._load_upload_workflow_text("playwright_get_upload_url")
+    assert text == "example `playwright_get_upload_url` usage"
 
 
 def test_load_upload_workflow_text_falls_back_on_read_error(monkeypatch):

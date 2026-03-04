@@ -66,7 +66,10 @@ def route_group_for_metrics(path: str, *, upload_path_prefix: str) -> str:
     if path.startswith(ARTIFACT_PATH_PREFIX):
         return "/artifacts/{server_id}/{session_id}/{artifact_id}/{filename}"
     if path.startswith(upload_path_prefix):
-        return f"{upload_path_prefix}/{{server_id}}"
+        normalized_upload_prefix = upload_path_prefix.rstrip("/") or "/"
+        if normalized_upload_prefix == "/":
+            return "/{server_id}"
+        return f"{normalized_upload_prefix}/{{server_id}}"
     if is_public_unprotected_path(path):
         return path
     if path.endswith(_OAUTH_DISCOVERY_PATH_SUFFIXES):

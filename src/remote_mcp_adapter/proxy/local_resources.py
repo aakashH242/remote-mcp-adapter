@@ -9,6 +9,9 @@ from fastmcp.resources import Resource
 
 from .factory import ProxyMount
 
+_UPLOAD_TOOL_PLACEHOLDER = "{{UPLOAD_TOOL_NAME}}"
+_LEGACY_UPLOAD_TOOL_PLACEHOLDER = "`get_upload_url`"
+
 
 def _upload_workflow_doc_path() -> Path:
     """Return the absolute path to the bundled upload_workflow.md guidance file."""
@@ -33,6 +36,26 @@ def _default_upload_workflow_text(upload_endpoint_tool_name: str) -> str:
     )
 
 
+def _render_upload_workflow_template(*, template: str, upload_endpoint_tool_name: str) -> str:
+    """Render upload workflow template with the server-specific helper tool name.
+
+    Prefers explicit ``{{UPLOAD_TOOL_NAME}}`` placeholder replacement.
+    Falls back to replacing the exact legacy token `` `get_upload_url` ``.
+
+    Args:
+        template: Source markdown template text.
+        upload_endpoint_tool_name: Server-specific helper tool name.
+
+    Returns:
+        Rendered markdown text.
+    """
+    if _UPLOAD_TOOL_PLACEHOLDER in template:
+        return template.replace(_UPLOAD_TOOL_PLACEHOLDER, upload_endpoint_tool_name)
+    if _LEGACY_UPLOAD_TOOL_PLACEHOLDER in template:
+        return template.replace(_LEGACY_UPLOAD_TOOL_PLACEHOLDER, f"`{upload_endpoint_tool_name}`")
+    return template
+
+
 def _load_upload_workflow_text(upload_endpoint_tool_name: str) -> str:
     """Load and patch the upload workflow markdown, falling back to the built-in text on error.
 
@@ -42,7 +65,10 @@ def _load_upload_workflow_text(upload_endpoint_tool_name: str) -> str:
     doc_path = _upload_workflow_doc_path()
     try:
         content = doc_path.read_text(encoding="utf-8")
-        return content.replace("get_upload_url", upload_endpoint_tool_name)
+        return _render_upload_workflow_template(
+            template=content,
+            upload_endpoint_tool_name=upload_endpoint_tool_name,
+        )
     except Exception:
         return _default_upload_workflow_text(upload_endpoint_tool_name)
 

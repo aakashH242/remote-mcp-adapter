@@ -58,9 +58,21 @@ def test_resolve_config_and_paths(monkeypatch):
     mounts = {"/mcp/a": "a", "/mcp/b": "b"}
     assert rrh.resolve_server_id_for_path("/mcp/a/tools", mounts) == "a"
     assert rrh.resolve_server_id_for_path("/none", mounts) is None
+    assert rrh.resolve_server_id_for_path("/mcp/ax", mounts) is None
 
-    monkeypatch.setattr(rrh, "build_server_upload_path", lambda upload_path, sid: "/upload/")
+    overlapping_mounts = {
+        "/mcp/foo": "foo",
+        "/mcp/foo/bar": "foobar",
+    }
+    assert rrh.resolve_server_id_for_path("/mcp/foo", overlapping_mounts) == "foo"
+    assert rrh.resolve_server_id_for_path("/mcp/foo/bar", overlapping_mounts) == "foobar"
+    assert rrh.resolve_server_id_for_path("/mcp/foo/bar/tools", overlapping_mounts) == "foobar"
+    assert rrh.resolve_server_id_for_path("/mcp/foobar", overlapping_mounts) is None
+
     assert rrh.upload_path_prefix("/upload") == "/upload/"
+    assert rrh.upload_path_prefix("/upload/") == "/upload/"
+    assert rrh.upload_path_prefix("upload") == "/upload/"
+    assert rrh.upload_path_prefix("/") == "/"
 
 
 def test_is_stateful_request_path():

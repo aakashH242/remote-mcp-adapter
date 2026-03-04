@@ -7,7 +7,7 @@ The upload flow is two-step:
 
 ## Steps
 
-1. Call the server-prefixed helper tool (for example `playwright_get_upload_url`).
+1. Call the server-prefixed helper tool (for example `{{UPLOAD_TOOL_NAME}}`).
 2. Use the returned `upload_url` and `headers` (includes `Mcp-Session-Id`) to POST multipart/form-data.
    Repeat the `file` form field to upload multiple files in one request.
    If helper output says `sha256_required=true`, include one `sha256` form field per `file` form field in the same order.
