@@ -1,0 +1,87 @@
+name: Coverage Badge
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update-coverage-badge:
+    if: ${{ github.actor != 'github-actions[bot]' }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Install dependencies
+        run: uv sync --all-extras --dev
+
+      - name: Run tests with coverage
+        run: |
+          uv run pytest tests \
+            --cov=src/remote_mcp_adapter \
+            --cov-report=xml \
+            --cov-report=term-missing \
+            --cov-fail-under=80
+
+      - name: Generate badge JSON
+        run: |
+          python - <<'PY'
+          import xml.etree.ElementTree as ET
+          from pathlib import Path
+          import json
+
+          coverage_xml = Path('coverage.xml')
+          tree = ET.parse(coverage_xml)
+          root = tree.getroot()
+          line_rate = float(root.attrib.get('line-rate', 0.0))
+          pct = round(line_rate * 100)
+
+          if pct >= 90:
+              color = 'brightgreen'
+          elif pct >= 80:
+              color = 'green'
+          elif pct >= 70:
+              color = 'yellow'
+          elif pct >= 60:
+              color = 'orange'
+          else:
+              color = 'red'
+
+          payload = {
+              'schemaVersion': 1,
+              'label': 'coverage',
+              'message': f'{pct}%',
+              'color': color,
+          }
+
+          out = Path('.github/badges/coverage-badge.json')
+          out.parent.mkdir(parents=True, exist_ok=True)
+          out.write_text(json.dumps(payload, indent=2) + '\n', encoding='utf-8')
+          print(payload)
+          PY
+
+      - name: Commit badge update
+        run: |
+          if git diff --quiet .github/badges/coverage-badge.json; then
+            echo 'No badge changes.'
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .github/badges/coverage-badge.json
+          git commit -m "chore: update coverage badge"
+          git push

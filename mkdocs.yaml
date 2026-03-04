@@ -1,0 +1,108 @@
+site_name: Remote MCP Adapter
+site_description: "Config-driven MCP proxy that adds session-safe file uploads, artifact handling, and robust state and health controls for upstream MCP servers."
+site_url: "https://aakashh242.github.io/remote-mcp-adapter/"
+site_author: "Aakash"
+repo_url: "https://github.com/aakashh242/remote-mcp-adapter"
+repo_name: "aakashh242/remote-mcp-adapter"
+
+docs_dir: docs
+site_dir: site
+use_directory_urls: true
+
+theme:
+  name: material
+  language: en
+  palette:
+    - scheme: slate
+      primary: black
+      accent: light green
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+    - scheme: default
+      primary: black
+      accent: blue
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+  features:
+    - navigation.instant
+    - navigation.tabs
+    - navigation.top
+    - navigation.tracking
+    - navigation.sections
+    - navigation.expand
+    - navigation.footer
+#    - toc.integrate
+    - toc.follow
+    - content.code.copy
+    - content.tabs.link
+    - search.highlight
+    - search.share
+  icon:
+    repo: fontawesome/brands/github
+
+nav:
+  - Home: index.md
+  - Getting Started: getting-started.md
+  - Core Concepts: core-concepts.md
+  - How It Works: how-it-works.md
+  - Configuration: configuration.md
+  - Config Reference: config-reference.md
+  - Security: security.md
+  - Telemetry: telemetry.md
+  - Health: health.md
+  - Troubleshooting: troubleshooting.md
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          options:
+            docstring_style: google
+            separate_signature: true
+            show_source: true
+  - git-revision-date-localized:
+      enabled: !ENV [CI, true]
+      fallback_to_build_date: true
+      type: date
+      enable_creation_date: false
+  - minify:
+      minify_html: true
+
+markdown_extensions:
+  - abbr
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - toc:
+      permalink: true
+
+  - pymdownx.highlight
+  - pymdownx.inlinehilite
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.details
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - pymdownx.mark
+  - pymdownx.caret
+  - pymdownx.tilde
+  - pymdownx.smartsymbols
+  - pymdownx.tasklist:
+      custom_checkbox: true
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: "https://github.com/aakashh242/remote-mcp-adapter"
+      name: "GitHub"
