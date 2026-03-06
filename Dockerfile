@@ -1,4 +1,5 @@
 FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim
+LABEL io.modelcontextprotocol.server.name="io.github.aakashH242/remote-mcp-adapter"
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     UV_COMPILE_BYTECODE=1 \
