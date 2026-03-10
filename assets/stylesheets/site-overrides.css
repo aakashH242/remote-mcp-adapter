@@ -1,0 +1,135 @@
+/* Make the docs feel less oversized and use more of the viewport on desktop. */
+
+:root {
+  --rmca-text-font: Inter, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --rmca-code-font: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+}
+
+body,
+input {
+  font-family: var(--rmca-text-font);
+}
+
+code,
+kbd,
+pre {
+  font-family: var(--rmca-code-font);
+}
+
+.md-typeset {
+  font-size: 0.74rem;
+  line-height: 1.55;
+}
+
+.md-typeset h1 {
+  font-size: 1.8rem;
+  margin: 0 0 1rem;
+}
+
+.md-typeset h2 {
+  font-size: 1.3rem;
+  margin: 1.4rem 0 0.7rem;
+}
+
+.md-typeset h3 {
+  font-size: 1.05rem;
+  margin: 1.1rem 0 0.5rem;
+}
+
+.md-typeset h2 code,
+.md-typeset h3 code {
+  font-size: inherit;
+  font-weight: 700;
+  padding: 0;
+  background: transparent;
+  border-radius: 0;
+}
+
+.md-typeset p,
+.md-typeset ul,
+.md-typeset ol,
+.md-typeset dl,
+.md-typeset table:not([class]) {
+  margin: 0 0 0.8rem;
+}
+
+.md-typeset li {
+  margin-bottom: 0.2rem;
+}
+
+.md-typeset code {
+  font-size: 0.72rem;
+}
+
+.md-typeset .tabbed-labels {
+  gap: 0.55rem;
+  padding-left: 0.2rem;
+}
+
+.md-typeset .tabbed-labels > label {
+  font-weight: 700;
+  padding: 0.22rem 0.7rem 0.2rem;
+}
+
+.md-typeset .tabbed-content {
+  padding-top: 0.3rem;
+}
+
+.md-typeset .highlight {
+  position: relative;
+}
+
+.md-typeset .highlight > .md-clipboard {
+  position: absolute;
+  top: 0.35rem;
+  opacity: 0.9;
+}
+
+.md-typeset .highlight > .md-clipboard:not(.copy-to-llm-code) {
+  right: 0.35rem;
+}
+
+.md-typeset .highlight > .copy-to-llm-code {
+  right: 2.15rem;
+  margin-left: 0;
+}
+
+.md-sidebar--secondary .md-nav__title {
+  margin-bottom: 0.45rem;
+}
+
+.md-sidebar--secondary .md-nav__list {
+  gap: 0;
+}
+
+.md-sidebar--secondary .md-nav__item {
+  margin: 0;
+}
+
+.md-sidebar--secondary .md-nav__link {
+  margin-top: 0;
+  padding: 0.12rem 0;
+  line-height: 1.3;
+}
+
+.md-sidebar--secondary .md-nav__item .md-nav {
+  margin-left: 0.45rem;
+}
+
+.md-grid {
+  max-width: 88rem;
+}
+
+@media screen and (min-width: 76.25em) {
+  .md-main__inner {
+    max-width: 100%;
+  }
+
+  .md-content {
+    max-width: none;
+  }
+
+  .md-content__inner {
+    margin-right: 0.8rem;
+  }
+}
