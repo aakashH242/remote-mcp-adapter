@@ -459,18 +459,16 @@ async def test_override_tool_run_and_from_mcp_tool(monkeypatch):
     assert isinstance(built, h.OverrideTool)
 
 
-def test_is_tool_disabled_exact_and_regex(monkeypatch):
-    warnings = []
-    monkeypatch.setattr(h.logger, "warning", lambda *a, **kw: warnings.append(kw.get("extra", {}).get("pattern")))
-
+def test_is_tool_disabled_exact_and_regex():
     assert h._is_tool_disabled("my_tool", []) is False
     assert h._is_tool_disabled("my_tool", ["my_tool"]) is True
     assert h._is_tool_disabled("my_tool", ["other_tool"]) is False
     assert h._is_tool_disabled("internal_debug", ["^internal_.*"]) is True
     assert h._is_tool_disabled("public_tool", ["^internal_.*"]) is False
-    # Invalid regex is skipped with a warning, not raised
+    # Invalid regex silently falls back to exact-match only — no exception, no warning
     assert h._is_tool_disabled("any_tool", ["[invalid"]) is False
-    assert "[invalid" in warnings
+    assert h._is_tool_disabled("[invalid", ["[invalid"]) is True  # still matches as exact
+
 
 
 @pytest.mark.asyncio

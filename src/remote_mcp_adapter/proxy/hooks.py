@@ -68,6 +68,7 @@ class AdapterWireState:
     local_resources_added: set[str] = field(default_factory=set)
     local_tools_added: set[str] = field(default_factory=set)
     registered_tools_by_server: dict[str, set[str]] = field(default_factory=dict)
+    visibility_transform_added: set[str] = field(default_factory=set)
 
 
 class OverrideTool(Tool):
@@ -265,8 +266,9 @@ async def _list_upstream_tools(mount: ProxyMount) -> dict[str, Any]:
 def _is_tool_disabled(tool_name: str, patterns: list[str]) -> bool:
     """Return True when *tool_name* matches any entry in *patterns*.
 
-    Each pattern is tested first as a plain exact-match string, then as a Python
-    ``re.fullmatch`` regex. Invalid regex patterns are skipped with a warning.
+    Each pattern is first compared as a plain string; if it does not match,
+    it is compiled and applied as a ``re.fullmatch`` regex. Patterns that fail
+    to compile are silently treated as exact-match only.
 
     Args:
         tool_name: Name of the tool to check.
@@ -279,18 +281,17 @@ def _is_tool_disabled(tool_name: str, patterns: list[str]) -> bool:
             if re.fullmatch(pattern, tool_name):
                 return True
         except re.error:
-            logger.warning(
-                "Invalid regex in disabled_tools; pattern skipped",
-                extra={"pattern": pattern},
-            )
+            pass
     return False
 
 
 def _build_disabled_matcher(patterns: list[str]) -> Callable[[str], bool]:
     """Compile *patterns* once and return a matcher callable.
 
-    Invalid regex entries are logged as warnings exactly once (not once per
-    tool name), and are still checked as plain exact-match strings.
+    Each pattern is always in the ``exact`` set for O(1) name lookups.
+    Patterns that also compile as valid Python regexes are additionally checked
+    via ``re.fullmatch``. Patterns that fail to compile are logged as a warning
+    once (not once per tool name) and treated as exact-match only.
 
     Args:
         patterns: Exact names or regex patterns from ``disabled_tools``.
@@ -306,7 +307,7 @@ def _build_disabled_matcher(patterns: list[str]) -> Callable[[str], bool]:
             compiled.append(re.compile(pattern))
         except re.error:
             logger.warning(
-                "Invalid regex in disabled_tools; pattern skipped",
+                "Invalid regex in disabled_tools; treating as exact-match only",
                 extra={"pattern": pattern},
             )
 
@@ -568,7 +569,7 @@ async def wire_adapters(
             server_status[server.id] = False
             continue
 
-        if server.disabled_tools:
+        if server.disabled_tools and server.id not in wire_state.visibility_transform_added:
             disabled_names = {name for name in upstream_tool_map if is_disabled(name)}
             if disabled_names:
                 logger.info(
@@ -576,6 +577,7 @@ async def wire_adapters(
                     extra={"server_id": server.id, "disabled_names": sorted(disabled_names)},
                 )
                 mount.proxy.add_transform(Visibility(False, names=disabled_names))
+                wire_state.visibility_transform_added.add(server.id)
 
         registered_tools = wire_state.registered_tools_by_server.setdefault(server.id, set())
         for adapter in upload_consumers:
