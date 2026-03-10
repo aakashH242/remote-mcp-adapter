@@ -286,6 +286,38 @@ def _is_tool_disabled(tool_name: str, patterns: list[str]) -> bool:
     return False
 
 
+def _build_disabled_matcher(patterns: list[str]) -> Callable[[str], bool]:
+    """Compile *patterns* once and return a matcher callable.
+
+    Invalid regex entries are logged as warnings exactly once (not once per
+    tool name), and are still checked as plain exact-match strings.
+
+    Args:
+        patterns: Exact names or regex patterns from ``disabled_tools``.
+
+    Returns:
+        A callable ``(tool_name: str) -> bool`` that returns ``True`` when the
+        tool should be suppressed.
+    """
+    exact: set[str] = set(patterns)
+    compiled: list[re.Pattern[str]] = []
+    for pattern in patterns:
+        try:
+            compiled.append(re.compile(pattern))
+        except re.error:
+            logger.warning(
+                "Invalid regex in disabled_tools; pattern skipped",
+                extra={"pattern": pattern},
+            )
+
+    def _match(tool_name: str) -> bool:
+        if tool_name in exact:
+            return True
+        return any(r.fullmatch(tool_name) for r in compiled)
+
+    return _match
+
+
 def _build_upload_consumer_handler(
     *,
     store: SessionStore,
@@ -488,8 +520,9 @@ async def wire_adapters(
         upload_consumers = [adapter for adapter in server.adapters if isinstance(adapter, UploadConsumerAdapterConfig)]
         artifact_producers = [adapter for adapter in server.adapters if isinstance(adapter, ArtifactProducerAdapterConfig)]
         upload_helper_enabled = bool(upload_consumers and config.uploads.enabled)
+        is_disabled = _build_disabled_matcher(server.disabled_tools)
 
-        helper_disabled = _is_tool_disabled(helper_tool_name, server.disabled_tools)
+        helper_disabled = is_disabled(helper_tool_name)
         if helper_disabled and upload_helper_enabled:
             logger.info(
                 "Upload helper tool suppressed by disabled_tools",
@@ -536,7 +569,7 @@ async def wire_adapters(
             continue
 
         if server.disabled_tools:
-            disabled_names = {name for name in upstream_tool_map if _is_tool_disabled(name, server.disabled_tools)}
+            disabled_names = {name for name in upstream_tool_map if is_disabled(name)}
             if disabled_names:
                 logger.info(
                     "Applying disabled_tools suppression via Visibility transform",
@@ -549,7 +582,7 @@ async def wire_adapters(
             for tool_name in adapter.tools:
                 if tool_name in registered_tools:
                     continue
-                if _is_tool_disabled(tool_name, server.disabled_tools):
+                if is_disabled(tool_name):
                     logger.info(
                         "Upload consumer tool suppressed by disabled_tools",
                         extra={"server_id": server.id, "tool_name": tool_name},
@@ -586,7 +619,7 @@ async def wire_adapters(
             for tool_name in adapter.tools:
                 if tool_name in registered_tools:
                     continue
-                if _is_tool_disabled(tool_name, server.disabled_tools):
+                if is_disabled(tool_name):
                     logger.info(
                         "Artifact producer tool suppressed by disabled_tools",
                         extra={"server_id": server.id, "tool_name": tool_name},
