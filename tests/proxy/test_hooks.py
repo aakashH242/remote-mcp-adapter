@@ -13,12 +13,16 @@ class _FakeProxy:
     def __init__(self):
         self.providers = []
         self.tools = []
+        self.transforms = []
 
     def add_provider(self, provider):
         self.providers.append(provider)
 
     def add_tool(self, tool):
         self.tools.append(tool)
+
+    def add_transform(self, transform):
+        self.transforms.append(transform)
 
 
 class _FakeProbeClient:
@@ -99,20 +103,22 @@ def _config(*, uploads_enabled=True, allow_download=True, artifacts_enabled=True
     )
 
 
-def _server(server_id="srv", adapters=None):
+def _server(server_id="srv", adapters=None, disabled_tools=None):
     return SimpleNamespace(
         id=server_id,
         mount_path=f"/mcp/{server_id}",
         adapters=adapters or [],
+        disabled_tools=disabled_tools or [],
         tool_defaults=SimpleNamespace(tool_call_timeout_seconds=5, allow_raw_output=False),
     )
 
 
-def _mount(server_id="srv", upstream_tools=None):
+def _mount(server_id="srv", upstream_tools=None, disabled_tools=None):
     return SimpleNamespace(
         server=SimpleNamespace(
             id=server_id,
             mount_path=f"/mcp/{server_id}",
+            disabled_tools=disabled_tools or [],
             tool_defaults=SimpleNamespace(tool_call_timeout_seconds=5, allow_raw_output=False),
         ),
         clients=_FakeClients(upstream_tools or []),
@@ -451,3 +457,112 @@ async def test_override_tool_run_and_from_mcp_tool(monkeypatch):
     mcp_tool = _mcp_tool("x")
     built = h.OverrideTool.from_mcp_tool(mcp_tool, handler=fake_handler)
     assert isinstance(built, h.OverrideTool)
+
+
+def test_is_tool_disabled_exact_and_regex():
+    assert h._is_tool_disabled("my_tool", []) is False
+    assert h._is_tool_disabled("my_tool", ["my_tool"]) is True
+    assert h._is_tool_disabled("my_tool", ["other_tool"]) is False
+    assert h._is_tool_disabled("internal_debug", ["^internal_.*"]) is True
+    assert h._is_tool_disabled("public_tool", ["^internal_.*"]) is False
+    # Invalid regex silently falls back to exact-match only — no exception, no warning
+    assert h._is_tool_disabled("any_tool", ["[invalid"]) is False
+    assert h._is_tool_disabled("[invalid", ["[invalid"]) is True  # still matches as exact
+
+
+
+@pytest.mark.asyncio
+async def test_wire_adapters_respects_disabled_tools(monkeypatch):
+    monkeypatch.setattr(h, "UploadConsumerAdapterConfig", _FakeUploadAdapter)
+    monkeypatch.setattr(h, "ArtifactProducerAdapterConfig", _FakeArtifactAdapter)
+    monkeypatch.setattr(h, "register_upload_workflow_resource", lambda **kw: None)
+    monkeypatch.setattr(h, "register_get_upload_url_tool", lambda **kw: None)
+    monkeypatch.setattr(h, "_build_upload_consumer_handler", lambda **kw: lambda a, c: None)
+    monkeypatch.setattr(h, "_build_upload_consumer_override_tool", lambda **kw: f"upload-{kw['upstream_tool'].name}")
+    monkeypatch.setattr(h, "_build_artifact_producer_handler", lambda **kw: lambda a, c: None)
+    monkeypatch.setattr(h.OverrideTool, "from_mcp_tool", staticmethod(lambda mcp_tool, handler: f"artifact-{mcp_tool.name}"))
+
+    # u1 is disabled; a1 should still be registered
+    s1 = _server("s1", adapters=[_FakeUploadAdapter(["u1"]), _FakeArtifactAdapter(["a1"])], disabled_tools=["u1"])
+    config = _config(uploads_enabled=True)
+    config.servers = [s1]
+    mount1 = _mount("s1")
+    # wire_adapters reads server.disabled_tools from the config server object
+    # The mount's server namespace also needs disabled_tools for the helper check
+    mount1.server.disabled_tools = ["u1"]
+
+    async def fake_list(mount):
+        return {"u1": _mcp_tool("u1"), "a1": _mcp_tool("a1")}
+
+    monkeypatch.setattr(h, "_list_upstream_tools", fake_list)
+
+    status = await h.wire_adapters(config=config, proxy_map={"s1": mount1}, store=object())
+    assert status["s1"] is True
+    assert "upload-u1" not in mount1.proxy.tools
+    assert "artifact-a1" in mount1.proxy.tools
+
+
+@pytest.mark.asyncio
+async def test_wire_adapters_disabled_upload_helper_suppresses_resource_and_tool(monkeypatch):
+    monkeypatch.setattr(h, "UploadConsumerAdapterConfig", _FakeUploadAdapter)
+    monkeypatch.setattr(h, "ArtifactProducerAdapterConfig", _FakeArtifactAdapter)
+
+    resources_added = []
+    tools_added = []
+    monkeypatch.setattr(h, "register_upload_workflow_resource", lambda **kw: resources_added.append(kw["mount"].server.id))
+    monkeypatch.setattr(h, "register_get_upload_url_tool", lambda **kw: tools_added.append(kw["mount"].server.id))
+    monkeypatch.setattr(h, "_build_upload_consumer_handler", lambda **kw: lambda a, c: None)
+    monkeypatch.setattr(h, "_build_upload_consumer_override_tool", lambda **kw: f"upload-{kw['upstream_tool'].name}")
+    monkeypatch.setattr(h, "_build_artifact_producer_handler", lambda **kw: lambda a, c: None)
+    monkeypatch.setattr(h.OverrideTool, "from_mcp_tool", staticmethod(lambda mcp_tool, handler: f"artifact-{mcp_tool.name}"))
+
+    from remote_mcp_adapter.proxy.local_tools import get_upload_url_tool_name
+    helper_name = get_upload_url_tool_name("s1")
+
+    s1 = _server("s1", adapters=[_FakeUploadAdapter(["u1"])], disabled_tools=[helper_name])
+    config = _config(uploads_enabled=True)
+    config.servers = [s1]
+    mount1 = _mount("s1")
+    mount1.server.disabled_tools = [helper_name]
+
+    async def fake_list(mount):
+        return {"u1": _mcp_tool("u1")}
+
+    monkeypatch.setattr(h, "_list_upstream_tools", fake_list)
+
+    status = await h.wire_adapters(config=config, proxy_map={"s1": mount1}, store=object())
+    assert status["s1"] is True
+    # Helper tool and resource suppressed
+    assert resources_added == []
+    assert tools_added == []
+
+
+@pytest.mark.asyncio
+async def test_wire_adapters_disabled_tools_no_adapters(monkeypatch):
+    """disabled_tools must be applied even when no upload/artifact adapters are configured."""
+    monkeypatch.setattr(h, "UploadConsumerAdapterConfig", _FakeUploadAdapter)
+    monkeypatch.setattr(h, "ArtifactProducerAdapterConfig", _FakeArtifactAdapter)
+    monkeypatch.setattr(h, "register_upload_workflow_resource", lambda **kw: None)
+    monkeypatch.setattr(h, "register_get_upload_url_tool", lambda **kw: None)
+
+    # Server has no adapters at all — only disabled_tools
+    s1 = _server("s1", adapters=[], disabled_tools=["secret_tool"])
+    config = _config()
+    config.servers = [s1]
+    mount1 = _mount("s1")
+    mount1.server.disabled_tools = ["secret_tool"]
+
+    async def fake_list(mount):
+        return {"secret_tool": _mcp_tool("secret_tool"), "public_tool": _mcp_tool("public_tool")}
+
+    monkeypatch.setattr(h, "_list_upstream_tools", fake_list)
+
+    status = await h.wire_adapters(config=config, proxy_map={"s1": mount1}, store=object())
+    assert status["s1"] is True
+    # Visibility transform must have been applied with the disabled name
+    from fastmcp.server.transforms.visibility import Visibility
+    assert any(
+        isinstance(t, Visibility) and "secret_tool" in (t.names or set())
+        for t in mount1.proxy.transforms
+    )
+

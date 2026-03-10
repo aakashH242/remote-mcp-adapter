@@ -16,13 +16,13 @@ storage:
 
 sessions:
   upstream_session_termination_retries: 3
-  idle_ttl_seconds: 180
+  idle_ttl_seconds: 1800
 
 uploads:
   ttl_seconds: 180
 
 artifacts:
-  ttl_seconds: 180
+  ttl_seconds: 1800
 
 servers:
   - id: "playwright"

@@ -171,6 +171,15 @@ def test_upstream_and_server_and_adapter_validators():
     server = ServerConfig(id=" srv ", mount_path="mcp", upstream=UpstreamConfig(url="http://x"))
     assert server.id == "srv"
     assert server.mount_path == "/mcp"
+    assert server.disabled_tools == []
+
+    server_with_disabled = ServerConfig(
+        id="s",
+        mount_path="/mcp",
+        upstream=UpstreamConfig(url="http://x"),
+        disabled_tools=["exact_tool", "^prefix_.*"],
+    )
+    assert server_with_disabled.disabled_tools == ["exact_tool", "^prefix_.*"]
 
     with pytest.raises(ValueError, match=r"servers\[\]\.id is required"):
         ServerConfig(id="  ", mount_path="/m", upstream=UpstreamConfig(url="http://x"))
