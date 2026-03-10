@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import copy
+import re
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 import logging
@@ -11,6 +12,7 @@ from urllib.parse import urlencode
 
 from mcp.types import TextContent
 from pydantic import PrivateAttr
+from fastmcp.server.transforms.visibility import Visibility
 
 from fastmcp import Context
 from fastmcp.client import Client
@@ -260,6 +262,62 @@ async def _list_upstream_tools(mount: ProxyMount) -> dict[str, Any]:
     return {tool.name: tool for tool in upstream_tools}
 
 
+def _is_tool_disabled(tool_name: str, patterns: list[str]) -> bool:
+    """Return True when *tool_name* matches any entry in *patterns*.
+
+    Each pattern is tested first as a plain exact-match string, then as a Python
+    ``re.fullmatch`` regex. Invalid regex patterns are skipped with a warning.
+
+    Args:
+        tool_name: Name of the tool to check.
+        patterns: Exact names or regex patterns from ``disabled_tools``.
+    """
+    for pattern in patterns:
+        if tool_name == pattern:
+            return True
+        try:
+            if re.fullmatch(pattern, tool_name):
+                return True
+        except re.error:
+            logger.warning(
+                "Invalid regex in disabled_tools; pattern skipped",
+                extra={"pattern": pattern},
+            )
+    return False
+
+
+def _build_disabled_matcher(patterns: list[str]) -> Callable[[str], bool]:
+    """Compile *patterns* once and return a matcher callable.
+
+    Invalid regex entries are logged as warnings exactly once (not once per
+    tool name), and are still checked as plain exact-match strings.
+
+    Args:
+        patterns: Exact names or regex patterns from ``disabled_tools``.
+
+    Returns:
+        A callable ``(tool_name: str) -> bool`` that returns ``True`` when the
+        tool should be suppressed.
+    """
+    exact: set[str] = set(patterns)
+    compiled: list[re.Pattern[str]] = []
+    for pattern in patterns:
+        try:
+            compiled.append(re.compile(pattern))
+        except re.error:
+            logger.warning(
+                "Invalid regex in disabled_tools; pattern skipped",
+                extra={"pattern": pattern},
+            )
+
+    def _match(tool_name: str) -> bool:
+        if tool_name in exact:
+            return True
+        return any(r.fullmatch(tool_name) for r in compiled)
+
+    return _match
+
+
 def _build_upload_consumer_handler(
     *,
     store: SessionStore,
@@ -462,14 +520,21 @@ async def wire_adapters(
         upload_consumers = [adapter for adapter in server.adapters if isinstance(adapter, UploadConsumerAdapterConfig)]
         artifact_producers = [adapter for adapter in server.adapters if isinstance(adapter, ArtifactProducerAdapterConfig)]
         upload_helper_enabled = bool(upload_consumers and config.uploads.enabled)
+        is_disabled = _build_disabled_matcher(server.disabled_tools)
 
-        if upload_helper_enabled and server.id not in wire_state.local_resources_added:
+        helper_disabled = is_disabled(helper_tool_name)
+        if helper_disabled and upload_helper_enabled:
+            logger.info(
+                "Upload helper tool suppressed by disabled_tools",
+                extra={"server_id": server.id, "tool_name": helper_tool_name},
+            )
+        if upload_helper_enabled and not helper_disabled and server.id not in wire_state.local_resources_added:
             register_upload_workflow_resource(
                 mount=mount,
                 upload_endpoint_tool_name=helper_tool_name,
             )
             wire_state.local_resources_added.add(server.id)
-        if upload_helper_enabled and server.id not in wire_state.local_tools_added:
+        if upload_helper_enabled and not helper_disabled and server.id not in wire_state.local_tools_added:
             register_get_upload_url_tool(
                 mount=mount,
                 config=config,
@@ -487,7 +552,7 @@ async def wire_adapters(
             )
             wire_state.providers_added.add(server.id)
 
-        if not upload_consumers and not artifact_producers:
+        if not upload_consumers and not artifact_producers and not server.disabled_tools:
             server_status[server.id] = True
             continue
 
@@ -503,10 +568,25 @@ async def wire_adapters(
             server_status[server.id] = False
             continue
 
+        if server.disabled_tools:
+            disabled_names = {name for name in upstream_tool_map if is_disabled(name)}
+            if disabled_names:
+                logger.info(
+                    "Applying disabled_tools suppression via Visibility transform",
+                    extra={"server_id": server.id, "disabled_names": sorted(disabled_names)},
+                )
+                mount.proxy.add_transform(Visibility(False, names=disabled_names))
+
         registered_tools = wire_state.registered_tools_by_server.setdefault(server.id, set())
         for adapter in upload_consumers:
             for tool_name in adapter.tools:
                 if tool_name in registered_tools:
+                    continue
+                if is_disabled(tool_name):
+                    logger.info(
+                        "Upload consumer tool suppressed by disabled_tools",
+                        extra={"server_id": server.id, "tool_name": tool_name},
+                    )
                     continue
                 upstream_tool = upstream_tool_map.get(tool_name)
                 if upstream_tool is None:
@@ -538,6 +618,12 @@ async def wire_adapters(
         for adapter in artifact_producers:
             for tool_name in adapter.tools:
                 if tool_name in registered_tools:
+                    continue
+                if is_disabled(tool_name):
+                    logger.info(
+                        "Artifact producer tool suppressed by disabled_tools",
+                        extra={"server_id": server.id, "tool_name": tool_name},
+                    )
                     continue
                 upstream_tool = upstream_tool_map.get(tool_name)
                 if upstream_tool is None:

@@ -227,6 +227,9 @@ This is the only required section. Each entry defines one upstream MCP server an
 |---|---|---|
 | `id` | *(required)* | Unique slug for this server. Used in URLs, logs, storage paths, and the injected upload tool name. |
 | `mount_path` | *(required)* | HTTP path where the adapter accepts MCP requests for this server. |
+| `disabled_tools` | `[]` | Tool names or Python regex patterns to suppress. Matching tools are never registered and never appear in `list_tools` responses. |
+
+Each entry in `disabled_tools` is checked as a plain exact-match string first; if that does not match, it is compiled and applied as a `re.fullmatch` regex. Invalid patterns are skipped with a warning log.
 
 ### `servers[].upstream`
 
