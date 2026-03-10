@@ -1,0 +1,45 @@
+# Example values file for the Distributed Shared Platform Helm scenario.
+# This is a base shape. You can use it directly with the chart.
+
+deploymentMode: distributed
+replicaCount: 1
+
+persistence:
+  enabled: true
+  existingClaim: remote-mcp-adapter-shared
+
+environment:
+  envFromSecret:
+    name: remote-mcp-adapter-env
+    keys: [MCP_ADAPTER_TOKEN]
+
+ingress:
+  enabled: true
+  hosts:
+    - host: mcp-gateway.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+
+config:
+  config.yaml:
+    core:
+      public_base_url: https://mcp-gateway.example.com
+      auth:
+        enabled: true
+        token: ${MCP_ADAPTER_TOKEN}
+    storage:
+      root: /data/shared
+    state_persistence:
+      type: disk
+    servers:
+      - id: playwright
+        mount_path: /mcp/playwright
+        upstream:
+          transport: streamable_http
+          url: http://playwright.default.svc.cluster.local:8931/mcp
+      - id: fetch
+        mount_path: /mcp/fetch
+        upstream:
+          transport: streamable_http
+          url: http://fetch.default.svc.cluster.local:8080/mcp
