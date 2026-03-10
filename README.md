@@ -14,8 +14,6 @@
 [![Coverage](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/aakashH242/remote-mcp-adapter/main/.github/badges/coverage-badge.json&style=flat-square)](https://github.com/aakashH242/remote-mcp-adapter/actions/workflows/coverage-badge.yml)
 [![Docs](https://img.shields.io/badge/docs-online-blue?style=flat-square)](https://aakashh242.github.io/remote-mcp-adapter/)
 
-
-
 ---
 
 The [Model Context Protocol](https://modelcontextprotocol.io/) supports remote servers over Streamable HTTP. But most MCP servers were built assuming the client and server share a filesystem. When you move a server to a container or a remote machine, two things break: tools that read local files can't reach files on the client's machine, and tools that write files (screenshots, PDFs) save them on the server where the client can't retrieve them.
@@ -24,7 +22,7 @@ This adapter sits between your client and your upstream MCP servers. It stages u
 
 ---
 
-## Key Features
+## ✨ Key Features
 
 - 🌐 **Multiserver relay** - Expose multiple upstream MCP servers under one gateway (`/mcp/<server>`).
 - 🖥️ **Code mode** - Collapse any server's tool surface into a single discover/execute interface for coding agents.
@@ -40,19 +38,24 @@ This adapter sits between your client and your upstream MCP servers. It stages u
 
 ---
 
-## What's New
+## 🆕 What's New
 
 <details>
-<summary>**v0.2.0 (03-10-2026)**</summary>
+
+<summary> **v0.2.0 (03-10-2026)** </summary>
+
 - Tools can now be hidden per server using either tool names or regex. Set under `servers[].disabled_tools`.
+
 - [Code mode](https://blog.cloudflare.com/code-mode/) can be enabled globally or for each server.
+
 - Upload consumer tool descriptions can be shortened. Set `core.shorten_descriptions` to set globally or set at each `server[].shorten_descriptions`.
+
 - Helm chart for deployment.
 </details>
 
 ---
 
-## Core concepts
+## 🧠 Core concepts
 
 Three ideas cover most of what the adapter does.
 
@@ -64,9 +67,9 @@ Three ideas cover most of what the adapter does.
 
 ---
 
-## Quick Start
+## 🚀 Quick Start
 
-### Docker Compose (recommended)
+### 🐳 Docker Compose (recommended)
 
 The repo includes a [`compose.yaml`](compose.yaml) that starts Playwright MCP on port 8931 and the adapter on port 8932.
 
@@ -82,7 +85,7 @@ Verify the adapter is running:
 curl http://localhost:8932/healthz
 ```
 
-### From source
+### 🧪 From source
 
 Requires Python 3.12+ and [uv](https://docs.astral.sh/uv/).
 
@@ -94,7 +97,7 @@ uv run remote-mcp-adapter --config config.yaml
 ```
 ---
 
-### Configure in IDE/Agent
+### 🧭 Configure in IDE/Agent
 
 **OpenAI Codex**
 
@@ -145,7 +148,7 @@ Go to https://www.csm-testcenter.org/ and upload the readme of our repo there. T
 
 ---
 
-## Minimal configuration
+## ⚙️ Minimal configuration
 
 ```yaml
 servers:
@@ -170,7 +173,7 @@ servers:
 
 ---
 
-## Deployment Notes
+## ☸️ Deployment Notes
 
 ⚠️ When adapters are enabled, it is important that the adapter and the upstream servers share a common directory - 
 either via local filesystem or network storage. 
@@ -187,7 +190,7 @@ For Kubernetes, use the published Helm repository:
 
 - `https://aakashh242.github.io/remote-mcp-adapter`
 
-That is the repository URL Helm expects for `helm repo add`, because it is the GitHub Pages root where `index.yaml` is published. The source chart lives in [charts/remote-mcp-adapter](charts/remote-mcp-adapter) if you want to inspect or contribute to it, but that source folder is not the primary end-user install path.
+The source chart lives in [charts/remote-mcp-adapter](charts/remote-mcp-adapter) if you want to inspect or contribute to it, but that source folder is not the primary end-user install path.
 
 Example Helm install flow:
 
@@ -217,7 +220,7 @@ docker run -d -v ./shared:/<your-path> -v ./config.yaml:/etc/remote-mcp-adapter/
 
 ---
 
-## Documentation
+## 📚 Documentation
 
 Full documentation lives in the [MkDocs site](https://aakashh242.github.io/remote-mcp-adapter/):
 
@@ -237,6 +240,6 @@ Full documentation lives in the [MkDocs site](https://aakashh242.github.io/remot
 
 ---
 
-## License
+## ⚖️ License
 
 [MIT](LICENSE)
