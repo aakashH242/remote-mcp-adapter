@@ -290,9 +290,8 @@ def _build_disabled_matcher(patterns: list[str]) -> Callable[[str], bool]:
 
     Each pattern is always in the ``exact`` set for O(1) name lookups.
     Patterns that also compile as valid Python regexes are additionally checked
-    via ``re.fullmatch``; patterns that fail to compile are silently treated as
-    exact-match only — no warning is emitted, because exact matching already
-    handles them correctly.
+    via ``re.fullmatch``. Patterns that fail to compile are logged as a warning
+    once (not once per tool name) and treated as exact-match only.
 
     Args:
         patterns: Exact names or regex patterns from ``disabled_tools``.
@@ -307,7 +306,10 @@ def _build_disabled_matcher(patterns: list[str]) -> Callable[[str], bool]:
         try:
             compiled.append(re.compile(pattern))
         except re.error:
-            pass  # exact-match fallback covers this pattern; no warning needed
+            logger.warning(
+                "Invalid regex in disabled_tools; treating as exact-match only",
+                extra={"pattern": pattern},
+            )
 
     def _match(tool_name: str) -> bool:
         if tool_name in exact:
