@@ -115,8 +115,47 @@ core:
 
 ---
 
+## Multi-replica adapter behaves inconsistently
+
+**Symptom:** sessions disappear after a pod restart, requests behave differently across replicas, or the service is unstable once traffic starts spreading across multiple adapter pods.
+
+**Cause:** Multiple adapter replicas are running without a shared state backend. Node-local disk is fine for one adapter pod, but it is not enough once session metadata must be shared across replicas.
+
+**Fix:**
+
+- if you only need one adapter pod, stay on disk-backed state
+- if you want multiple adapter replicas, configure Redis for `state_persistence`
+- make sure every adapter replica can also reach the same shared file storage when uploads or artifacts are involved
+
+```yaml
+state_persistence:
+  type: redis
+  redis:
+    host: redis.default.svc.cluster.local
+    port: 6379
+```
+
+---
+
+## Redis-backed deployment will not come up
+
+**Symptom:** pods restart, `/healthz` reports persistence problems, or startup fails after switching to Redis-backed state.
+
+**Cause:** Redis is configured as mandatory state, but the adapter cannot connect to it because the host, port, password, network policy, or secret wiring is wrong.
+
+**Fix:**
+
+- confirm the Redis service name resolves from the adapter pod
+- verify the configured password and injected secret values
+- check whether network policies or namespace boundaries block access
+- if Redis is intentionally unavailable, do not use a Redis-required HA shape yet
+
+---
+
 ## Next steps
 
+- **Previous topic:** [Health](health.md) - understand degraded states and probe behavior.
+- **Next:** [API Reference](api/index.md) - public entry points first, then internals.
+- **See also:** [Post-Install Verification](deployment/helm/post-install-verification.md) - the quickest way to catch deployment wiring problems before users do.
 - **See also:** [Core Concepts](core-concepts.md) - sessions, handles, artifacts.
 - **See also:** [Security](security.md) - exact auth and signed URL behavior.
-- **See also:** [Health](health.md) - interpreting `/healthz`.

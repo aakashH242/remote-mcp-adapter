@@ -1,0 +1,44 @@
+# Example values file for the Browser-Facing Ingress Helm scenario.
+# This is an overlay. Layer it on top of a base shape such as
+# values-ha-adapter.yaml or values-standalone-durable.yaml.
+
+deploymentMode: distributed
+replicaCount: 2
+
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+  hosts:
+    - host: demo.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: demo-example-com-tls
+      hosts:
+        - demo.example.com
+
+environment:
+  envFromSecret:
+    name: remote-mcp-adapter-env
+    keys: [MCP_ADAPTER_TOKEN, MCP_ADAPTER_SIGNING_SECRET]
+
+config:
+  config.yaml:
+    core:
+      public_base_url: https://demo.example.com
+      allow_artifacts_download: true
+      auth:
+        enabled: true
+        token: ${MCP_ADAPTER_TOKEN}
+        signing_secret: ${MCP_ADAPTER_SIGNING_SECRET}
+      cors:
+        enabled: true
+        allowed_origins: [https://demo.example.com]
+    uploads:
+      require_sha256: true
+      ttl_seconds: 300
+    artifacts:
+      ttl_seconds: 1800

@@ -56,9 +56,10 @@ def test_core_auth_validators():
 
 
 def test_core_config_validators():
-    cfg = CoreConfig(upload_path="uploads", log_level=" INFO ")
+    cfg = CoreConfig(upload_path="uploads", log_level=" INFO ", short_description_max_tokens=12)
     assert cfg.upload_path == "/uploads"
     assert cfg.log_level == "info"
+    assert cfg.short_description_max_tokens == 12
     with pytest.raises(ValueError, match="core.log_level must be one of"):
         CoreConfig(log_level="verbose")
     with pytest.raises(ValueError, match=r"core\.upload_path cannot be '/'"):
@@ -172,14 +173,19 @@ def test_upstream_and_server_and_adapter_validators():
     assert server.id == "srv"
     assert server.mount_path == "/mcp"
     assert server.disabled_tools == []
+    assert server.shorten_descriptions is None
 
     server_with_disabled = ServerConfig(
         id="s",
         mount_path="/mcp",
         upstream=UpstreamConfig(url="http://x"),
         disabled_tools=["exact_tool", "^prefix_.*"],
+        shorten_descriptions=True,
+        short_description_max_tokens=9,
     )
     assert server_with_disabled.disabled_tools == ["exact_tool", "^prefix_.*"]
+    assert server_with_disabled.shorten_descriptions is True
+    assert server_with_disabled.short_description_max_tokens == 9
 
     with pytest.raises(ValueError, match=r"servers\[\]\.id is required"):
         ServerConfig(id="  ", mount_path="/m", upstream=UpstreamConfig(url="http://x"))

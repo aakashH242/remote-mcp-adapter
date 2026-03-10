@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import re
 from typing import Any
 from urllib.parse import urlencode
 
@@ -13,22 +12,9 @@ from fastmcp.server.dependencies import get_context
 
 from ..config import AdapterConfig
 from .factory import ProxyMount
+from .tool_names import get_upload_url_tool_name
 from .upload_credentials import UploadCredentialManager
 from .upload_helpers import build_server_upload_path, derive_public_base_url
-
-_TOOL_NAME_SAFE_RE = re.compile(r"[^A-Za-z0-9_]+")
-
-
-def get_upload_url_tool_name(server_id: str) -> str:
-    """Return deterministic server-prefixed helper tool name.
-
-    Args:
-        server_id: Server identifier.
-    """
-    normalized = _TOOL_NAME_SAFE_RE.sub("_", server_id.strip()).strip("_")
-    if not normalized:
-        normalized = "server"
-    return f"{normalized}_get_upload_url"
 
 
 def _is_sha256_required(config: AdapterConfig) -> bool:

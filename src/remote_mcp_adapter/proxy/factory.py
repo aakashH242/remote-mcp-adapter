@@ -16,6 +16,7 @@ from fastmcp.server.providers.proxy import FastMCPProxy
 
 from ..config import AdapterConfig, ServerConfig
 from ..core.storage.store import SessionStore
+from .code_mode import build_code_mode_transforms, resolve_code_mode_enabled
 from .resilient_client import ResilientClient
 
 logger = logging.getLogger(__name__)
@@ -221,8 +222,32 @@ def _resolve_timeout_seconds(config: AdapterConfig, server: ServerConfig) -> int
     Args:
         config: Full adapter configuration.
         server: Server-specific configuration.
+
+    Returns:
+        Effective timeout in seconds, or ``None``.
     """
     return server.tool_defaults.tool_call_timeout_seconds or config.core.defaults.tool_call_timeout_seconds
+
+
+def _resolve_code_mode_for_server(config: AdapterConfig, server: ServerConfig) -> bool:
+    """Resolve effective Code Mode toggle for one server.
+
+    This helper tolerates lightweight config doubles used in unit tests that
+    may not define the new ``code_mode_enabled`` fields yet.
+
+    Args:
+        config: Full adapter configuration or compatible test double.
+        server: Server-specific configuration or compatible test double.
+
+    Returns:
+        Effective Code Mode state for the server.
+    """
+    core_enabled = bool(getattr(config.core, "code_mode_enabled", False))
+    server_enabled = getattr(server, "code_mode_enabled", None)
+    return resolve_code_mode_enabled(
+        core_enabled=core_enabled,
+        server_enabled=server_enabled,
+    )
 
 
 def build_proxy_map(config: AdapterConfig, session_store: SessionStore | None = None) -> dict[str, ProxyMount]:
@@ -238,6 +263,7 @@ def build_proxy_map(config: AdapterConfig, session_store: SessionStore | None = 
     proxy_map: dict[str, ProxyMount] = {}
     for server in config.servers:
         timeout_seconds = _resolve_timeout_seconds(config, server)
+        code_mode_enabled = _resolve_code_mode_for_server(config, server)
         client_registry = SessionClientRegistry(
             server=server,
             session_store=session_store,
@@ -248,6 +274,10 @@ def build_proxy_map(config: AdapterConfig, session_store: SessionStore | None = 
         proxy = FastMCPProxy(
             name=f"MCP Proxy [{server.id}]",
             client_factory=client_registry.get_session_client,
+            transforms=build_code_mode_transforms(
+                enabled=code_mode_enabled,
+                server_id=server.id,
+            ),
         )
         proxy_map[server.id] = ProxyMount(server=server, proxy=proxy, clients=client_registry)
     return proxy_map

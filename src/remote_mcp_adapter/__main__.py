@@ -20,7 +20,7 @@ def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run the MCP general adapter.")
     parser.add_argument(
         "--config",
-        default=os.getenv("MCP_ADAPTER_CONFIG", "/etc/config.yaml"),
+        default=os.getenv("MCP_ADAPTER_CONFIG", "/etc/remote-mcp-adapter/config.yaml"),
         help="Path to adapter YAML config.",
     )
     parser.add_argument("--host", default=None, help="Bind host. Defaults to core.host from config.")

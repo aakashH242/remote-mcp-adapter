@@ -1,0 +1,7 @@
+apiVersion: v2
+name: remote-mcp-adapter
+description: A proxy adapter to enable hosting the official Playwright MCP server remotely.
+type: application
+kubeVersion: ">=1.29.0 <1.36.0"
+version: 0.1.0
+appVersion: 0.2.0

@@ -38,7 +38,7 @@ jobs:
             --cov=src/remote_mcp_adapter \
             --cov-report=xml \
             --cov-report=term-missing \
-            --cov-fail-under=80
+            --cov-fail-under=90
 
       - name: Generate badge JSON
         run: |

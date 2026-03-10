@@ -121,6 +121,8 @@ The following table lists every metric name emitted by the adapter.
 
 ## Next steps
 
+- **Previous topic:** [Security](security.md) — auth, signed URLs, and protected endpoints.
+- **Next:** [Deployment](deployment.md) — choose how you actually want to run the adapter.
 - **See also:** [Configuration](configuration.md) — add the telemetry block to your config.
-- **See also:** [Config Reference](config-reference.md) — all `telemetry.*` fields.
+- **See also:** [Config Reference](configuration/config-reference.md) — all `telemetry.*` fields.
 - **See also:** [Health](health.md) — the health endpoint for operational diagnostics.

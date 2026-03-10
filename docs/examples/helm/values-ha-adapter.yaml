@@ -1,0 +1,46 @@
+# Example values file for the HA Adapter Tier Helm scenario.
+# This is a base shape. You can use it directly with the chart.
+
+deploymentMode: distributed
+replicaCount: 3
+
+autoscaling:
+  enabled: true
+  minReplicas: 3
+  maxReplicas: 6
+  targetCPUUtilizationPercentage: 80
+
+strictAntiAffinity: true
+
+podDisruptionBudget:
+  maxUnavailable: 1
+
+persistence:
+  enabled: true
+  existingClaim: remote-mcp-adapter-rwx
+
+environment:
+  envFromSecret:
+    name: remote-mcp-adapter-env
+    keys: [MCP_ADAPTER_TOKEN, REDIS_PASSWORD]
+
+config:
+  config.yaml:
+    core:
+      public_base_url: https://mcp-gateway.example.com
+      auth:
+        enabled: true
+        token: ${MCP_ADAPTER_TOKEN}
+    storage:
+      root: /data/shared
+      lock_mode: redis
+    state_persistence:
+      type: redis
+      unavailable_policy: exit
+      redis:
+        host: redis.default.svc.cluster.local
+        port: 6379
+        password: ${REDIS_PASSWORD}
+    sessions:
+      allow_revival: true
+      idle_ttl_seconds: 1800

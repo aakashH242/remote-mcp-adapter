@@ -20,6 +20,9 @@ class ServerConfig(BaseModel):
     upstream: UpstreamConfig
     upstream_ping: UpstreamPingOverridesConfig = Field(default_factory=UpstreamPingOverridesConfig)
     tool_defaults: ToolDefaults = Field(default_factory=ToolDefaults)
+    code_mode_enabled: bool | None = None
+    shorten_descriptions: bool | None = None
+    short_description_max_tokens: int | None = Field(default=None, gt=0)
     disabled_tools: list[str] = Field(default_factory=list)
     adapters: list[AdapterDefinition] = Field(default_factory=list)
 

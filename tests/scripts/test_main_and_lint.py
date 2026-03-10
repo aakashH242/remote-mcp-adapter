@@ -13,7 +13,10 @@ def test_parse_args_defaults_and_overrides(monkeypatch):
     assert args.config == "c.yaml"
     assert args.host is None and args.port is None and args.log_level is None
 
-    monkeypatch.setattr("sys.argv", ["prog", "--config", "x.yaml", "--host", "0.0.0.0", "--port", "9000", "--log-level", "WARNING"])
+    monkeypatch.setattr(
+        "sys.argv",
+        ["prog", "--config", "x.yaml", "--host", "0.0.0.0", "--port", "9000", "--log-level", "WARNING"],
+    )
     args2 = cli._parse_args()
     assert args2.config == "x.yaml"
     assert args2.host == "0.0.0.0"
@@ -25,7 +28,11 @@ def test_main_invokes_uvicorn(monkeypatch):
     cfg = SimpleNamespace(core=SimpleNamespace(host="127.0.0.1", port=8000, log_level="INFO"))
     calls = {}
 
-    monkeypatch.setattr(cli, "_parse_args", lambda: SimpleNamespace(config="c.yaml", host=None, port=None, log_level=None))
+    monkeypatch.setattr(
+        cli,
+        "_parse_args",
+        lambda: SimpleNamespace(config="c.yaml", host=None, port=None, log_level=None),
+    )
     monkeypatch.setattr(cli, "load_config", lambda path: cfg)
     monkeypatch.setattr(cli, "create_app", lambda config: "app")
     monkeypatch.setenv("MCP_ADAPTER_SHUTDOWN_TIMEOUT_SECONDS", "12")

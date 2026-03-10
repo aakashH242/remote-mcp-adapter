@@ -1,0 +1,35 @@
+# Example values file for the Observability-First Production Helm scenario.
+# This is an overlay. Layer it on top of a base shape such as
+# values-ha-adapter.yaml or values-distributed.yaml.
+
+deploymentMode: distributed
+replicaCount: 2
+
+podAnnotations:
+  prometheus.io/scrape: "true"
+
+environment:
+  envFromSecret:
+    name: remote-mcp-adapter-env
+    keys: [MCP_ADAPTER_TOKEN, OTEL_TOKEN]
+
+config:
+  config.yaml:
+    core:
+      auth:
+        enabled: true
+        token: ${MCP_ADAPTER_TOKEN}
+      upstream_ping:
+        interval_seconds: 10
+        timeout_seconds: 3
+        failure_threshold: 3
+    telemetry:
+      enabled: true
+      transport: http
+      endpoint: https://otel-collector.example.com/v1/metrics
+      logs_endpoint: https://otel-collector.example.com/v1/logs
+      headers:
+        Authorization: Bearer ${OTEL_TOKEN}
+      emit_logs: true
+      service_name: remote-mcp-adapter
+      service_namespace: mcp

@@ -93,6 +93,8 @@ def _config(*, uploads_enabled=True, allow_download=True, artifacts_enabled=True
         core=SimpleNamespace(
             defaults=SimpleNamespace(tool_call_timeout_seconds=10, allow_raw_output=False),
             allow_artifacts_download=allow_download,
+            shorten_descriptions=False,
+            short_description_max_tokens=16,
         ),
         storage=SimpleNamespace(
             artifact_locator_policy="strict",
@@ -109,6 +111,8 @@ def _server(server_id="srv", adapters=None, disabled_tools=None):
         mount_path=f"/mcp/{server_id}",
         adapters=adapters or [],
         disabled_tools=disabled_tools or [],
+        shorten_descriptions=None,
+        short_description_max_tokens=None,
         tool_defaults=SimpleNamespace(tool_call_timeout_seconds=5, allow_raw_output=False),
     )
 
@@ -146,6 +150,8 @@ def test_upload_consumer_note_and_schema_annotation_and_clone():
         upload_endpoint_tool_name="get_upload",
     )
     assert "file://" in note
+    assert "Do not pass local filesystem paths" in note
+    assert "get_upload" in note
 
     schema = {
         "type": "object",
@@ -153,14 +159,14 @@ def test_upload_consumer_note_and_schema_annotation_and_clone():
             "payload": {
                 "type": "object",
                 "properties": {
-                    "path": {"type": "string"},
+                    "path": {"type": "string", "description": "original path docs"},
                     "items": {"type": "array", "items": {"type": "object", "properties": {"inner": {"type": "string"}}}},
                 },
             }
         },
     }
     assert h._annotate_schema_path_description(schema, "payload.path", "note") is True
-    assert "note" in schema["properties"]["payload"]["properties"]["path"]["description"]
+    assert schema["properties"]["payload"]["properties"]["path"]["description"] == "original path docs\n\nnote"
     assert h._annotate_schema_path_description(schema, "payload.items.inner", "n2") is True
     assert h._annotate_schema_path_description(schema, "missing.path", "x") is False
 
@@ -188,26 +194,78 @@ def test_build_upload_consumer_override_tool_annotates_schema_and_fallback(monke
     monkeypatch.setattr(h.OverrideTool, "from_mcp_tool", staticmethod(fake_from_mcp_tool))
 
     adapter = _FakeUploadAdapter(["tool_a"], file_path_argument="payload.path")
-    schema = {"type": "object", "properties": {"payload": {"type": "object", "properties": {"path": {"type": "string"}}}}}
-    tool = _mcp_tool(schema=schema)
+    schema = {
+        "type": "object",
+        "properties": {"payload": {"type": "object", "properties": {"path": {"type": "string", "description": "field docs"}}}},
+    }
+    tool = _mcp_tool(description="upstream docs", schema=schema)
     result = h._build_upload_consumer_override_tool(
         upstream_tool=tool,
         handler=lambda *_: None,
         adapter=adapter,
         upload_endpoint_tool_name="helper_tool",
+        config=_config(),
+        server=_server(),
     )
     assert result == "override-tool"
     assert "helper_tool" in captured["description"]
+    assert "upstream docs" in captured["description"]
+    assert "helper_tool" in captured["parameters"]["properties"]["payload"]["properties"]["path"]["description"]
+    assert "field docs" in captured["parameters"]["properties"]["payload"]["properties"]["path"]["description"]
+    assert "upstream docs" not in captured["parameters"]["properties"]["payload"]["properties"]["path"]["description"]
 
     adapter_bad_path = _FakeUploadAdapter(["tool_a"], file_path_argument="missing.path")
-    tool2 = _mcp_tool(schema={"type": "object", "properties": {}})
+    tool2 = _mcp_tool(schema={"type": "object", "description": "root docs", "properties": {}})
     h._build_upload_consumer_override_tool(
         upstream_tool=tool2,
         handler=lambda *_: None,
         adapter=adapter_bad_path,
         upload_endpoint_tool_name="helper_tool",
+        config=_config(),
+        server=_server(),
     )
-    assert "description" in captured["parameters"]
+    assert captured["parameters"]["description"] != captured["description"]
+    assert "helper_tool" in captured["parameters"]["description"]
+    assert "root docs" in captured["parameters"]["description"]
+
+
+def test_build_upload_consumer_override_tool_shortens_description_when_enabled(monkeypatch):
+    captured = {}
+
+    def fake_from_mcp_tool(upstream_tool, handler, **kwargs):
+        captured["description"] = kwargs.get("description")
+        captured["parameters"] = kwargs.get("parameters")
+        return "override-tool"
+
+    monkeypatch.setattr(h.OverrideTool, "from_mcp_tool", staticmethod(fake_from_mcp_tool))
+
+    adapter = _FakeUploadAdapter(["tool_a"], file_path_argument="payload.path")
+    tool = _mcp_tool(
+        description=(
+            "Upload an image file to the browser page and attach it to the selected form field. "
+            "Use this for screenshots and media inputs."
+        ),
+        schema={"type": "object", "properties": {"payload": {"type": "object", "properties": {"path": {"type": "string"}}}}},
+    )
+    config = _config()
+    config.core.shorten_descriptions = True
+    config.core.short_description_max_tokens = 8
+    server = _server()
+
+    result = h._build_upload_consumer_override_tool(
+        upstream_tool=tool,
+        handler=lambda *_: None,
+        adapter=adapter,
+        upload_endpoint_tool_name="helper_tool",
+        config=config,
+        server=server,
+    )
+
+    assert result == "override-tool"
+    assert "Purpose:" in captured["description"]
+    assert "Key actions:" in captured["description"]
+    assert "helper_tool" in captured["description"]
+    assert "Purpose:" not in captured["parameters"]["properties"]["payload"]["properties"]["path"]["description"]
 
 
 @pytest.mark.asyncio
@@ -320,6 +378,7 @@ async def test_build_artifact_producer_handler_download_url_guards(monkeypatch):
     ]
 
     for meta in cases:
+
         async def base_result(**kwargs):
             return _FakeToolResult(content=[], structured_content=None, meta=meta)
 
@@ -333,7 +392,6 @@ async def test_build_artifact_producer_handler_download_url_guards(monkeypatch):
         )
         result = await handler({}, SimpleNamespace(session_id="sess", request_context=None))
         assert result.meta == meta
-
 
 
 def test_build_artifact_producer_handler_raises_tool_error_on_invalid_lock_mode(monkeypatch):
@@ -362,14 +420,26 @@ async def test_wire_adapters_full_flow_and_statuses(monkeypatch):
 
     resources_added = []
     tools_added = []
-    monkeypatch.setattr(h, "register_upload_workflow_resource", lambda **kwargs: resources_added.append(kwargs["mount"].server.id))
+    monkeypatch.setattr(
+        h,
+        "register_upload_workflow_resource",
+        lambda **kwargs: resources_added.append(kwargs["mount"].server.id),
+    )
     monkeypatch.setattr(h, "register_get_upload_url_tool", lambda **kwargs: tools_added.append(kwargs["mount"].server.id))
 
     upload_handler_calls = []
     artifact_handler_calls = []
-    monkeypatch.setattr(h, "_build_upload_consumer_handler", lambda **kwargs: upload_handler_calls.append(kwargs) or (lambda a, c: None))
+    monkeypatch.setattr(
+        h,
+        "_build_upload_consumer_handler",
+        lambda **kwargs: upload_handler_calls.append(kwargs) or (lambda a, c: None),
+    )
     monkeypatch.setattr(h, "_build_upload_consumer_override_tool", lambda **kwargs: f"upload-{kwargs['upstream_tool'].name}")
-    monkeypatch.setattr(h, "_build_artifact_producer_handler", lambda **kwargs: artifact_handler_calls.append(kwargs) or (lambda a, c: None))
+    monkeypatch.setattr(
+        h,
+        "_build_artifact_producer_handler",
+        lambda **kwargs: artifact_handler_calls.append(kwargs) or (lambda a, c: None),
+    )
 
     monkeypatch.setattr(h.OverrideTool, "from_mcp_tool", staticmethod(lambda mcp_tool, handler: f"artifact-{mcp_tool.name}"))
 
@@ -470,7 +540,6 @@ def test_is_tool_disabled_exact_and_regex():
     assert h._is_tool_disabled("[invalid", ["[invalid"]) is True  # still matches as exact
 
 
-
 @pytest.mark.asyncio
 async def test_wire_adapters_respects_disabled_tools(monkeypatch):
     monkeypatch.setattr(h, "UploadConsumerAdapterConfig", _FakeUploadAdapter)
@@ -517,6 +586,7 @@ async def test_wire_adapters_disabled_upload_helper_suppresses_resource_and_tool
     monkeypatch.setattr(h.OverrideTool, "from_mcp_tool", staticmethod(lambda mcp_tool, handler: f"artifact-{mcp_tool.name}"))
 
     from remote_mcp_adapter.proxy.local_tools import get_upload_url_tool_name
+
     helper_name = get_upload_url_tool_name("s1")
 
     s1 = _server("s1", adapters=[_FakeUploadAdapter(["u1"])], disabled_tools=[helper_name])
@@ -561,8 +631,5 @@ async def test_wire_adapters_disabled_tools_no_adapters(monkeypatch):
     assert status["s1"] is True
     # Visibility transform must have been applied with the disabled name
     from fastmcp.server.transforms.visibility import Visibility
-    assert any(
-        isinstance(t, Visibility) and "secret_tool" in (t.names or set())
-        for t in mount1.proxy.transforms
-    )
 
+    assert any(isinstance(t, Visibility) and "secret_tool" in (t.names or set()) for t in mount1.proxy.transforms)

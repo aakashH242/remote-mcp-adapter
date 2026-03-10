@@ -77,7 +77,35 @@ def test_resolve_config_and_paths(monkeypatch):
 
 def test_is_stateful_request_path():
     mounts = {"/mcp/a": "a"}
-    assert rrh.is_stateful_request_path(path="/mcp/a/tools", mount_path_to_server_id=mounts, upload_path_prefix="/upload") is True
-    assert rrh.is_stateful_request_path(path="/upload/a", mount_path_to_server_id=mounts, upload_path_prefix="/upload") is True
-    assert rrh.is_stateful_request_path(path="/artifacts/a/s/x/f", mount_path_to_server_id=mounts, upload_path_prefix="/upload") is True
-    assert rrh.is_stateful_request_path(path="/public", mount_path_to_server_id=mounts, upload_path_prefix="/upload") is False
+    assert (
+        rrh.is_stateful_request_path(
+            path="/mcp/a/tools",
+            mount_path_to_server_id=mounts,
+            upload_path_prefix="/upload",
+        )
+        is True
+    )
+    assert (
+        rrh.is_stateful_request_path(
+            path="/upload/a",
+            mount_path_to_server_id=mounts,
+            upload_path_prefix="/upload",
+        )
+        is True
+    )
+    assert (
+        rrh.is_stateful_request_path(
+            path="/artifacts/a/s/x/f",
+            mount_path_to_server_id=mounts,
+            upload_path_prefix="/upload",
+        )
+        is True
+    )
+    assert (
+        rrh.is_stateful_request_path(
+            path="/public",
+            mount_path_to_server_id=mounts,
+            upload_path_prefix="/upload",
+        )
+        is False
+    )

@@ -1,6 +1,8 @@
 # Getting Started
 
-**What you'll learn here:** how to run the adapter locally using Docker Compose (recommended) or directly from source, and how to confirm it is working.
+**What you'll learn here:** how to run the adapter locally using Docker Compose or directly from source, how to confirm it is working, and where to go next for production deployment options.
+
+For production deployment options, published artifacts, and Kubernetes installs, see [Deployment](deployment.md).
 
 ---
 
@@ -11,24 +13,51 @@
 
 ---
 
-## Option 1 - Docker Compose (recommended)
+## Run the adapter locally
 
-The repository includes a [`compose.yaml`](https://github.com/aakashH242/remote-mcp-adapter/blob/main/compose.yaml) that starts two containers: the Playwright MCP server on port 8931 and the Remote MCP Adapter on port 8932. They communicate over a private bridge network and share a mounted volume at `./data` for uploaded and artifact files.
+Choose the path that matches how you want to start:
 
-```bash
-git clone https://github.com/aakashH242/remote-mcp-adapter.git
-cd remote-mcp-adapter
+=== "Docker Compose"
 
-# The repo ships a config.yaml ready for the Compose setup.
-# Edit it if you want to point at a different upstream.
-docker compose up --build
-```
+    The repository includes a [`compose.yaml`](https://github.com/aakashH242/remote-mcp-adapter/blob/main/compose.yaml) that starts two containers: the Playwright MCP server on port 8931 and the Remote MCP Adapter on port 8932. They communicate over a private bridge network and share a mounted volume at `./data` for uploaded and artifact files.
 
-Once the containers are up, the adapter listens at `http://localhost:8932`. The Playwright server is exposed at `http://localhost:8932/mcp/playwright` (the `mount_path` defined in `config.yaml`).
+    ```bash
+    git clone https://github.com/aakashH242/remote-mcp-adapter.git
+    cd remote-mcp-adapter
+
+    # The repo ships a config.yaml ready for the Compose setup.
+    # Edit it if you want to point at a different upstream.
+    docker compose up --build
+    ```
+
+    Once the containers are up, the adapter listens at `http://localhost:8932`. The Playwright server is exposed at `http://localhost:8932/mcp/playwright` (the `mount_path` defined in `config.yaml`).
+
+    If you see `"status": "degraded"`, the adapter started but the upstream is not yet reachable. Check `docker compose logs playwright` — the Playwright container sometimes takes a few seconds to become ready.
+
+=== "Run from source"
+
+    Requires Python 3.12+ and [uv](https://docs.astral.sh/uv/).
+
+    ```bash
+    git clone https://github.com/aakashH242/remote-mcp-adapter.git
+    cd remote-mcp-adapter
+
+    uv sync
+    uv run remote-mcp-adapter --config config.yaml
+    ```
+
+    You need a running upstream MCP server for the adapter to connect to. If you want to use Playwright MCP, start it separately:
+
+    ```bash
+    # In a separate terminal — requires Node.js and npx
+    npx @playwright/mcp --headless --port 8931
+    ```
+
+    The `config.yaml` in the repo already points `upstream.url` at `http://playwright:8931/mcp` (the Compose hostname). When running from source, update that URL to `http://localhost:8931/mcp`.
 
 ### Sanity check
 
-Hit the health endpoint to confirm both containers are running and connected:
+Hit the health endpoint to confirm the adapter is running and connected:
 
 ```bash
 curl http://localhost:8932/healthz
@@ -49,38 +78,15 @@ A healthy response looks like this (HTTP 200):
 }
 ```
 
-If you see `"status": "degraded"`, the adapter started but the upstream is not yet reachable. Check `docker compose logs playwright` — the Playwright container sometimes takes a few seconds to become ready.
-
----
-
-## Option 2 — From source
-
-Requires Python 3.12+ and [uv](https://docs.astral.sh/uv/).
-
-```bash
-git clone https://github.com/aakashH242/remote-mcp-adapter.git
-cd remote-mcp-adapter
-
-uv sync
-uv run remote-mcp-adapter --config config.yaml
-```
-
-You need a running upstream MCP server for the adapter to connect to. If you want to use Playwright MCP, start it separately:
-
-```bash
-# In a separate terminal — requires Node.js and npx
-npx @playwright/mcp --headless --port 8931
-```
-
-The `config.yaml` in the repo already points `upstream.url` at `http://playwright:8931/mcp` (the Compose hostname). When running from source, update that URL to `http://localhost:8931/mcp`.
-
 ---
 
 ## Configuring your agent or IDE
 
 Once the adapter is running, point your agent at the adapter's `mount_path` URL rather than directly at the upstream server. The adapter handles the session header (`Mcp-Session-Id`) automatically as part of the MCP protocol.
 
-1. **OpenAI Codex**
+Choose the client you are wiring up:
+
+=== "OpenAI Codex"
 
     In `config.toml`:
 
@@ -89,7 +95,7 @@ Once the adapter is running, point your agent at the adapter's `mount_path` URL 
     url = "http://localhost:8932/mcp/playwright"
     ```
 
-2. **GitHub Copilot**
+=== "GitHub Copilot"
 
     In `mcp.json` (workspace or user settings):
 
@@ -104,7 +110,7 @@ Once the adapter is running, point your agent at the adapter's `mount_path` URL 
     }
     ```
 
-3. **Antigravity**
+=== "Antigravity"
 
     In `mcp_config.json`:
 

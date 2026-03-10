@@ -5,7 +5,15 @@ from types import SimpleNamespace
 from remote_mcp_adapter.proxy import artifact_download_credentials as adc
 
 
-def _config(*, allow_download: bool = True, auth_enabled: bool = True, signing_secret: str = "", token: str = "", auth_ttl: int = 60, artifact_ttl=None):
+def _config(
+    *,
+    allow_download: bool = True,
+    auth_enabled: bool = True,
+    signing_secret: str = "",
+    token: str = "",
+    auth_ttl: int = 60,
+    artifact_ttl=None,
+):
     return SimpleNamespace(
         core=SimpleNamespace(
             allow_artifacts_download=allow_download,
@@ -22,7 +30,11 @@ def _config(*, allow_download: bool = True, auth_enabled: bool = True, signing_s
 
 def test_signature_payload_has_expected_canonical_format():
     payload = adc._signature_payload(
-        server_id="s", session_id="sess", artifact_id="a1", filename="f.txt", expires_at=123
+        server_id="s",
+        session_id="sess",
+        artifact_id="a1",
+        filename="f.txt",
+        expires_at=123,
     )
     assert payload == b"s\nsess\na1\nf.txt\n123"
 
@@ -90,7 +102,11 @@ def test_validate_returns_false_for_missing_fields():
     manager = adc.ArtifactDownloadCredentialManager(enabled=True, secret="sec", ttl_seconds=10)
     assert (
         manager.validate(
-            server_id="s", session_id="sess", artifact_id="a1", filename="f.txt", query_params={"mcp_artifact_exp": "110"}
+            server_id="s",
+            session_id="sess",
+            artifact_id="a1",
+            filename="f.txt",
+            query_params={"mcp_artifact_exp": "110"},
         )
         is False
     )

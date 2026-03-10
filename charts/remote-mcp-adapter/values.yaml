@@ -1,0 +1,385 @@
+replicaCount: 1
+
+autoscaling:
+  enabled: false
+  # minReplicas: 1
+  # maxReplicas: 3
+  # targetCPUUtilizationPercentage: 80
+  # targetMemoryUtilizationPercentage: 80
+
+image:
+  repository: ghcr.io/aakashh242/remote-mcp-adapter
+  tag: ""                # if empty, defaults to Chart.appVersion
+  pullPolicy: IfNotPresent
+
+# Optional override for wrapper container command.
+# startCommand:
+#   - "python"
+#   - "-m"
+#   - "remote_mcp_adapter"
+
+imagePullSecrets: []
+# imagePullSecrets:
+#   - name: regcred
+
+# Optional environment injection for the main adapter container.
+# `envFromSecret.name` must refer to an existing Secret in the same namespace.
+# If `envFromSecret.keys` is omitted or empty, all keys from the Secret are
+# loaded as environment variables. If `keys` is provided, only those keys are
+# loaded, and the environment variable names match the Secret key names.
+environment:
+  env: {}
+  envFromSecret: {}
+  # env:
+  #   MCP_ADAPTER_TOKEN: "${MCP_ADAPTER_TOKEN}"
+  #   OTEL_EXPORTER_OTLP_HEADERS: "Authorization=Bearer token"
+  # envFromSecret:
+  #   name: remote-mcp-adapter-env
+  #   keys: [MCP_ADAPTER_TOKEN, MCP_ADAPTER_SIGNING_SECRET]
+
+# Adapter config rendered into a ConfigMap and mounted at config.directory.
+config:
+  directory: /etc/remote-mcp-adapter
+  config.yaml:
+    core:
+      allow_artifacts_download: true
+      public_base_url: remote-mcp-adapter.cluster.com
+      upstream_metadata_cache_ttl_seconds: 300
+      upstream_ping:
+        interval_seconds: 10
+        timeout_seconds: 3
+        failure_threshold: 3
+        open_cooldown_seconds: 15
+        half_open_probe_allowance: 3
+    state_persistence:
+      unavailable_policy: "fallback_memory"
+      reconciliation:
+        mode: "always"
+    storage:
+      root: /data/shared
+      max_size: 10Gi
+      artifact_locator_policy: "allow_configured_roots"
+      artifact_locator_allowed_roots:
+        - /tmp
+        - /data
+        - /app
+    sessions:
+      max_in_flight_per_session: 8
+      idle_ttl_seconds: 1800
+      upstream_session_termination_retries: 3
+      max_total_session_size: 128Mi
+    uploads:
+      max_file_bytes: "50Mi"
+      require_sha256: true
+    artifacts:
+      max_per_session: 128
+    servers:
+      - id: "playwright"
+        mount_path: "/mcp/playwright"
+        upstream:
+          transport: "streamable_http"
+          url: "http://localhost:8931/mcp"
+          insecure_tls: true
+        adapters:
+          - type: "upload_consumer"
+            tools: [ "browser_file_upload" ]
+            file_path_argument: "paths"
+          - type: "artifact_producer"
+            tools: [ "browser_take_screenshot", "browser_pdf_save" ]
+            output_path_argument: "filename"
+            output_locator:
+              mode: "regex"
+
+
+podAnnotations: {}
+# podAnnotations:
+#   prometheus.io/scrape: "true"
+
+podLabels: {}
+# podLabels:
+#   sidecar.istio.io/inject: "false"
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+  fsGroup: 1000
+  fsGroupChangePolicy: "OnRootMismatch"
+
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop: ["ALL"]
+
+
+service:
+  # ClusterIP | NodePort | LoadBalancer (or empty -> ClusterIP)
+  type: ClusterIP
+  port: 8932
+  # Optional: only for ClusterIP
+  # clusterIP: "None"          # headless
+  clusterIP: ""                # empty = default assigned
+  # Optional labels/annotations for the Service
+  labels: {}
+  # labels:
+  #   app.kubernetes.io/component: "proxy"
+  annotations: {}
+  # annotations:
+  #   # Note: we use tpl() in the template, so Helm templating works here.
+  #   external-dns.alpha.kubernetes.io/hostname: "pw-wrapper.{{ .Release.Namespace }}.example.com"
+  #   service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+  #   service.beta.kubernetes.io/aws-load-balancer-internal: "true"
+
+  # Optional: only for LoadBalancer
+  loadBalancerIP: ""
+  loadBalancerSourceRanges: []
+  # loadBalancerSourceRanges:
+  #   - "10.0.0.0/8"
+  #   - "192.168.0.0/16"
+
+  # Optional: for NodePort
+  nodePort: null               # e.g. 30932 (only used if type=NodePort)
+
+  # Optional: for any Service type
+  externalIPs: []
+  # externalIPs:
+  #   - "203.0.113.10"
+
+  # Optional: Kubernetes Service appProtocol field (k8s >= 1.20+)
+  appProtocol: "http"
+
+extraExposePorts: []
+# extraExposePorts:
+#   - name: metrics
+#     port: 9090
+#     protocol: TCP
+#     targetPort: 9090
+#     appProtocol: http
+#   - name: admin
+#     port: 8081
+#     protocol: TCP
+#     targetPort: 8081
+
+# Assumes you have nginx ingress running
+ingress:
+  enabled: false
+  # If your cluster supports it (k8s >= 1.18 typically), this becomes spec.ingressClassName
+  className: "nginx"
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-buffering: "off"
+    nginx.ingress.kubernetes.io/proxy-request-buffering: "off"
+    nginx.ingress.kubernetes.io/proxy-http-version: "1.1"
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-next-upstream: "off"
+    nginx.ingress.kubernetes.io/proxy-next-upstream-tries: "0"
+    nginx.ingress.kubernetes.io/proxy-next-upstream-timeout: "0"
+    cert-manager.io/cluster-issuer: "letsencrypt"
+# Rate limits
+#    nginx.ingress.kubernetes.io/limit-rps: "7"
+#    nginx.ingress.kubernetes.io/limit-burst-multiplier: "3"
+# When running multiple replicas of the adapter in standalone mode without a network file-system, enable
+# sticky sessions to prevent session breakage.
+#    nginx.ingress.kubernetes.io/affinity: "cookie"
+#    nginx.ingress.kubernetes.io/affinity-mode: "persistent"
+#    nginx.ingress.kubernetes.io/session-cookie-name: "mcp_route"
+#
+
+  hosts:
+    - host: remote-mcp-adapter.cluster.com
+      paths:
+        - path: /
+          pathType: Prefix
+
+  tls:
+    - secretName: remote-mcp-adapter-tls
+      hosts:
+        - remote-mcp-adapter.cluster.com
+
+
+
+livenessProbe:
+  httpGet:
+    path: "/healthz"
+    port: http
+  initialDelaySeconds: 10
+  periodSeconds: 60
+
+readinessProbe:
+  httpGet:
+    path: "/healthz"
+    port: http
+  initialDelaySeconds: 5
+  periodSeconds: 10
+
+resources: {}
+# resources:
+#   requests:
+#     cpu: 100m
+#     memory: 256Mi
+#   limits:
+#     cpu: 500m
+#     memory: 512Mi
+
+# Extra mounts for ALL containers
+volumeMounts: []
+# volumeMounts:
+#   - name: tmp
+#     mountPath: /tmp
+#
+# For standalone-only, each upstream server can also define its own
+# `volumeMounts` under `upstreamServers[]`.
+
+# Deployment mode - standalone or distributed
+# standalone - all upstream servers are run as side-car containers on the adapter pod
+# distributed - the adapter runs in its own pod and upstream services are assumed to already be running
+
+deploymentMode: standalone
+
+# Used only when deploymentMode=standalone.
+# At least one upstream server must be configured in standalone mode.
+upstreamServers:
+  - name: playwrightMCP
+    startCommand:
+      - "node"
+    # Keep upstream output paths aligned with config.config.yaml.storage.root,
+    # or define upstream-specific `volumeMounts` below for custom paths.
+    args:
+      - "cli.js"
+      - "--headless"
+      - "--browser"
+      - "chromium"
+      - "--port"
+      - "8931"
+      - "--allowed-hosts"
+      - "*"
+      - "--host"
+      - "0.0.0.0"
+      - "--caps"
+      - "pdf"
+      - "--isolated"
+      - "--no-sandbox"
+      - "--output-dir"
+      - '{{ include "remote-mcp-adapter.sharedMountPath" . }}'
+      - "--image-responses"
+      - "omit"
+      - "--allow-unrestricted-file-access"
+
+    image:
+      repository: mcr.microsoft.com/playwright/mcp
+      tag: "v0.0.68"
+      pullPolicy: IfNotPresent
+
+    service:
+      port: 8931
+
+    # Optional environment injection for this upstream container.
+    # `envFromSecret.name` must refer to an existing Secret in the same namespace.
+    # If `keys` is omitted or empty, all Secret keys are loaded with envFrom.
+    environment:
+      env: {}
+      envFromSecret: {}
+    # environment:
+    #   env:
+    #     DEBUG: "pw:browser*"
+    #   envFromSecret:
+    #     name: playwright-upstream-env
+    #     keys: [DEBUG]
+
+    securityContext:
+      allowPrivilegeEscalation: false
+      readOnlyRootFilesystem: false
+      capabilities:
+        drop: ["ALL"]
+
+    # Optional extra mounts for this upstream container only.
+    # Define matching pod-level volumes under top-level `volumes`.
+    # volumeMounts:
+    #   - name: browser-output
+    #     mountPath: /custom/output
+
+    resources: {}
+    # resources:
+    #   requests:
+    #     cpu: "500m"
+    #     memory: "1Gi"
+    #   limits:
+    #     cpu: "2"
+    #     memory: "4Gi"
+
+# When running in distributed mode, a network file system must be used to share files between upstream servers
+# and the adapter.
+persistence:
+  enabled: false
+  existingClaim: ""
+  size: 10Gi
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: ""
+  annotations: {}
+  finalizers: []
+  extraPvcLabels: {}
+  selectorLabels: {}
+  emptyDir: {}
+
+# Extra volumes (mounted at pod spec level)
+volumes: []
+# volumes:
+#   - name: tmp
+#     emptyDir: {}
+
+nodeSelector: {}
+# nodeSelector:
+#   kubernetes.io/os: linux
+
+# If true: enforce HARD anti-affinity (required) so Kubernetes will NOT place two pods of this
+# on the same node. This improves HA, but can leave pods Pending if the cluster doesn't have enough
+# eligible nodes (or nodeSelector/tolerations restrict placement).
+# If false: use SOFT anti-affinity (preferred) — scheduler tries to spread pods across nodes, but will
+# co-locate if needed to keep the deployment running.
+strictAntiAffinity: false
+
+affinity: {}
+# affinity:
+#   nodeAffinity:
+#     requiredDuringSchedulingIgnoredDuringExecution:
+#       nodeSelectorTerms:
+#         - matchExpressions:
+#             - key: node-role.kubernetes.io/worker
+#               operator: Exists
+
+tolerations: []
+# tolerations:
+#   - key: "dedicated"
+#     operator: "Equal"
+#     value: "mcp"
+#     effect: "NoSchedule"
+
+topologySpreadConstraints: []
+# topologySpreadConstraints:
+#   - maxSkew: 1
+#     topologyKey: kubernetes.io/hostname
+#     whenUnsatisfiable: ScheduleAnyway
+#     labelSelector:
+#       matchLabels:
+#         app.kubernetes.io/name: remote-mcp-adapter
+#         app.kubernetes.io/instance: "<release-name>"
+
+# PodDisruptionBudget (optional)
+# If this is missing or {}, the template won't render anything.
+podDisruptionBudget: {}
+# podDisruptionBudget:
+#   minAvailable: 1
+#   # maxUnavailable: 0
+
+# Example for a multi-replica deployment (allow 1 to be disrupted):
+# podDisruptionBudget:
+#   maxUnavailable: 1
+
+# Example using percentages (supported by k8s):
+# podDisruptionBudget:
+#   maxUnavailable: "25%"
+

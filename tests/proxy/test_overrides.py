@@ -21,13 +21,11 @@ def test_resolve_tool_timeout_seconds_precedence_adapter_server_core():
     assert overrides.resolve_tool_timeout_seconds(core_defaults=core, server_defaults=server, adapter_overrides=adapter) == 30
 
 
-
 def test_resolve_tool_timeout_seconds_falls_back_when_values_missing():
     core = _tool_defaults(timeout=10)
     server = _tool_defaults(timeout=None)
     adapter = _tool_defaults(timeout=None)
     assert overrides.resolve_tool_timeout_seconds(core_defaults=core, server_defaults=server, adapter_overrides=adapter) == 10
-
 
 
 def test_resolve_allow_raw_output_uses_explicit_adapter_flag_first():
@@ -43,7 +41,6 @@ def test_resolve_allow_raw_output_uses_explicit_adapter_flag_first():
         )
         is True
     )
-
 
 
 def test_resolve_allow_raw_output_fallback_chain_and_default_false():

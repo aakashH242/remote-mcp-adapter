@@ -119,5 +119,7 @@ livenessProbe:
 
 ## Next steps
 
+- **Previous topic:** [Post-Install Verification](deployment/helm/post-install-verification.md) - confirm the Helm deployment is actually healthy before reading deeper diagnostics.
+- **Next:** [Troubleshooting](troubleshooting.md) - common failures and fixes.
 - **See also:** [Configuration](configuration.md) - upstream ping and startup settings.
 - **See also:** [Security](security.md) - public vs protected routes.

@@ -1,0 +1,55 @@
+# Example values file for the Standalone Quick Start Helm scenario.
+# This is a base shape. You can use it directly with the chart.
+
+deploymentMode: standalone
+replicaCount: 1
+
+persistence:
+  enabled: true
+  size: 10Gi
+
+ingress:
+  enabled: false
+
+config:
+  config.yaml:
+    core:
+      public_base_url: null
+      allow_artifacts_download: true
+    storage:
+      root: /data/shared
+    state_persistence:
+      type: disk
+    servers:
+      - id: playwright
+        mount_path: /mcp/playwright
+        upstream:
+          transport: streamable_http
+          url: http://localhost:8931/mcp
+        adapters:
+          - type: upload_consumer
+            tools: [browser_file_upload]
+            file_path_argument: paths
+          - type: artifact_producer
+            tools: [browser_take_screenshot, browser_pdf_save]
+            output_path_argument: filename
+            output_locator:
+              mode: regex
+
+upstreamServers:
+  - name: playwrightMCP
+    startCommand: ["node"]
+    args:
+      - cli.js
+      - --headless
+      - --browser
+      - chromium
+      - --port
+      - "8931"
+      - --host
+      - 0.0.0.0
+      - --output-dir
+      - /data/shared
+    image:
+      repository: mcr.microsoft.com/playwright/mcp
+      tag: v0.0.68
