@@ -146,6 +146,8 @@ def test_upload_consumer_note_and_schema_annotation_and_clone():
         upload_endpoint_tool_name="get_upload",
     )
     assert "file://" in note
+    assert "Do not pass local filesystem paths" in note
+    assert "get_upload" in note
 
     schema = {
         "type": "object",
@@ -160,7 +162,7 @@ def test_upload_consumer_note_and_schema_annotation_and_clone():
         },
     }
     assert h._annotate_schema_path_description(schema, "payload.path", "note") is True
-    assert "note" in schema["properties"]["payload"]["properties"]["path"]["description"]
+    assert schema["properties"]["payload"]["properties"]["path"]["description"] == "note"
     assert h._annotate_schema_path_description(schema, "payload.items.inner", "n2") is True
     assert h._annotate_schema_path_description(schema, "missing.path", "x") is False
 
@@ -189,7 +191,7 @@ def test_build_upload_consumer_override_tool_annotates_schema_and_fallback(monke
 
     adapter = _FakeUploadAdapter(["tool_a"], file_path_argument="payload.path")
     schema = {"type": "object", "properties": {"payload": {"type": "object", "properties": {"path": {"type": "string"}}}}}
-    tool = _mcp_tool(schema=schema)
+    tool = _mcp_tool(description="upstream docs", schema=schema)
     result = h._build_upload_consumer_override_tool(
         upstream_tool=tool,
         handler=lambda *_: None,
@@ -198,6 +200,8 @@ def test_build_upload_consumer_override_tool_annotates_schema_and_fallback(monke
     )
     assert result == "override-tool"
     assert "helper_tool" in captured["description"]
+    assert "upstream docs" not in captured["description"]
+    assert captured["parameters"]["properties"]["payload"]["properties"]["path"]["description"] == captured["description"]
 
     adapter_bad_path = _FakeUploadAdapter(["tool_a"], file_path_argument="missing.path")
     tool2 = _mcp_tool(schema={"type": "object", "properties": {}})
@@ -207,7 +211,7 @@ def test_build_upload_consumer_override_tool_annotates_schema_and_fallback(monke
         adapter=adapter_bad_path,
         upload_endpoint_tool_name="helper_tool",
     )
-    assert "description" in captured["parameters"]
+    assert captured["parameters"]["description"] == captured["description"]
 
 
 @pytest.mark.asyncio
@@ -565,4 +569,3 @@ async def test_wire_adapters_disabled_tools_no_adapters(monkeypatch):
         isinstance(t, Visibility) and "secret_tool" in (t.names or set())
         for t in mount1.proxy.transforms
     )
-

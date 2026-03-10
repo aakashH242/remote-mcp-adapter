@@ -10,6 +10,7 @@ from remote_mcp_adapter.core.persistence import memory_snapshot as ms
 from remote_mcp_adapter.core.persistence import persistence_factory as pf
 from remote_mcp_adapter.core.persistence import persistence_policy as pp
 from remote_mcp_adapter.core.persistence import redis_support as rs
+from remote_mcp_adapter.core.repo.records import SessionState, SessionTombstone
 
 
 class _Telemetry:
@@ -165,3 +166,112 @@ async def test_persistence_factory_runtime_and_health(monkeypatch, tmp_path):
     snap = await runtime.health_snapshot()
     assert snap["status"] in {"ok", "degraded"}
     await runtime.close()
+
+
+@pytest.mark.asyncio
+async def test_persistence_runtime_health_snapshot_degraded_paths(tmp_path):
+    class _BadRepo:
+        async def list_session_items(self):
+            raise RuntimeError("repo unavailable")
+
+        async def list_tombstone_items(self):
+            return []
+
+    runtime = pf.PersistenceRuntime(
+        backend_type="disk",
+        state_repository=_BadRepo(),
+        lock_provider=object(),
+        backend_details={"db_path": str(tmp_path / "missing.sqlite3")},
+        redis_health_monitor=SimpleNamespace(health_snapshot=lambda: asyncio.sleep(0, result={"status": "degraded"})),
+        memory_snapshot_manager=SimpleNamespace(health_snapshot=lambda: asyncio.sleep(0, result={"status": "degraded"})),
+    )
+
+    snapshot = await runtime.health_snapshot()
+
+    assert snapshot["status"] == "degraded"
+    assert snapshot["state_inventory"]["detail"] == "state_repository_unavailable"
+    assert snapshot["backend_status"]["detail"] == "state_db_missing_or_invalid"
+
+
+def test_persistence_factory_builders_cover_disk_memory_and_redis(monkeypatch, tmp_path):
+    snapshot_repo_calls = []
+    redis_repo_calls = []
+    lock_calls = []
+    monitor_calls = []
+
+    class _SnapshotRepo:
+        def __init__(self, **kwargs):
+            snapshot_repo_calls.append(kwargs)
+
+        def snapshot_items(self):
+            state = SessionState(server_id="s1", session_id="sess", created_at=1.0, last_accessed=1.0)
+            tombstone = SessionTombstone(state=state, expires_at=2.0)
+            return [(("s1", "sess"), state)], [(("s1", "sess"), tombstone)]
+
+    class _MemoryRepo:
+        def __init__(self):
+            self.replaced = None
+
+        def replace_all(self, **kwargs):
+            self.replaced = kwargs
+
+    class _MemorySnapshotManager:
+        def __init__(self, **kwargs):
+            self.kwargs = kwargs
+
+    class _RedisRepo:
+        def __init__(self, **kwargs):
+            redis_repo_calls.append(kwargs)
+
+    class _RedisLockProvider:
+        def __init__(self, **kwargs):
+            lock_calls.append(kwargs)
+
+    class _RedisMonitor:
+        def __init__(self, **kwargs):
+            monitor_calls.append(kwargs)
+
+    memory_repo = _MemoryRepo()
+    monkeypatch.setattr(pf, "InMemoryStateRepository", lambda: memory_repo)
+    monkeypatch.setattr(pf, "SqliteStateRepository", lambda **kwargs: _SnapshotRepo(**kwargs))
+    monkeypatch.setattr(pf, "MemorySnapshotManager", lambda **kwargs: _MemorySnapshotManager(**kwargs))
+    monkeypatch.setattr(pf, "RedisStateRepository", lambda **kwargs: _RedisRepo(**kwargs))
+    monkeypatch.setattr(pf, "RedisLockProvider", lambda **kwargs: _RedisLockProvider(**kwargs))
+    monkeypatch.setattr(pf, "RedisPersistenceHealthMonitor", lambda **kwargs: _RedisMonitor(**kwargs))
+    monkeypatch.setattr(pf, "create_redis_client", lambda cfg: "redis-client")
+    monkeypatch.setattr(pf, "build_keyspace", lambda key_base: f"ks:{key_base}")
+
+    config = SimpleNamespace(
+        storage=SimpleNamespace(root=str(tmp_path)),
+        state_persistence=SimpleNamespace(
+            refresh_on_startup=False,
+            snapshot_interval_seconds=11,
+            type="memory",
+            disk=SimpleNamespace(local_path=None, wal=SimpleNamespace(enabled=True)),
+            redis=SimpleNamespace(
+                host="redis",
+                port=6379,
+                db=2,
+                key_base="demo",
+                tls_insecure=False,
+                ping_seconds=9,
+            ),
+        ),
+    )
+
+    memory_runtime = pf._build_snapshot_enabled_memory_runtime(config)
+    assert memory_runtime.backend_type == "memory"
+    assert memory_runtime.memory_snapshot_manager is not None
+    assert memory_repo.replaced is not None
+
+    config.state_persistence.disk.local_path = str(tmp_path / "disk.sqlite3")
+    disk_runtime = pf._build_disk_runtime(config)
+    assert disk_runtime.backend_type == "disk"
+    assert disk_runtime.backend_details["mode"] == "sqlite"
+
+    redis_runtime = pf._build_redis_runtime(config)
+    assert redis_runtime.backend_type == "redis"
+    assert redis_runtime.redis_client == "redis-client"
+    assert redis_repo_calls
+    assert lock_calls
+    assert monitor_calls

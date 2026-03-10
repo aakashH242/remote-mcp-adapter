@@ -19,6 +19,7 @@ This adapter sits between your client and your upstream MCP servers. It stages u
 ## Key Features
 
 - 🌐 **Multiserver relay** - Expose multiple upstream MCP servers under one gateway (`/mcp/<server>`).
+- 🖥️ **Code mode** - Collapse any server's tool surface into a single discover/execute interface for coding agents.
 - ⬆️ **File uploads** - Stage client files and pass them to tools via `upload://...` handles.
 - 📬 **File outputs** - Capture screenshots, PDFs, and more, returning them as `artifact://...` MCP resources with optional download links.
 - ⏳ **Sessions** - Provide per-session isolation, TTL cleanup, and optional “revival” on reconnect.
@@ -34,8 +35,9 @@ This adapter sits between your client and your upstream MCP servers. It stages u
 ## What's New
 
 <details>
-<summary>**v0.1.2 (03-10-2026)**</summary>
+<summary>**v0.2.0 (03-10-2026)**</summary>
 - Tools can now be hidden per server using either tool names or regex. Set under `servers[].disabled_tools`.
+- [Code mode](https://blog.cloudflare.com/code-mode/https://blog.cloudflare.com/code-mode/) can be enabled globally or for each server. 
 </details>
 
 ---
@@ -171,7 +173,7 @@ and run the image.
 ```
 docker pull ghcr.io/aakashh242/remote-mcp-adapter:latest
 
-docker run -d -v ./shared:/<your-path> -v ./config.yaml:/etc/config.yaml -p 8932:8932 ghcr.io/aakashh242/remote-mcp-adapter:latest
+docker run -d -v ./shared:/<your-path> -v ./config.yaml:/etc/remote-mcp-adapter/config.yaml -p 8932:8932 ghcr.io/aakashh242/remote-mcp-adapter:latest
 
 ```
 

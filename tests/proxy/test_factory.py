@@ -267,3 +267,30 @@ def test_build_proxy_map_constructs_mounts(monkeypatch):
     assert proxy_map["b"].server.id == "b"
     assert proxy_ctor.calls[0]["name"] == "MCP Proxy [a]"
     assert callable(proxy_ctor.calls[0]["client_factory"])
+
+
+def test_build_proxy_map_passes_code_mode_transform_when_enabled(monkeypatch):
+    server = _server(server_id="a")
+    server.code_mode_enabled = True
+    config = SimpleNamespace(
+        servers=[server],
+        sessions=SimpleNamespace(upstream_session_termination_retries=4),
+        core=SimpleNamespace(
+            upstream_metadata_cache_ttl_seconds=25,
+            defaults=SimpleNamespace(tool_call_timeout_seconds=7),
+            code_mode_enabled=False,
+        ),
+    )
+
+    proxy_ctor = _CaptureCtor()
+    monkeypatch.setattr(f, "FastMCPProxy", proxy_ctor)
+    monkeypatch.setattr(
+        f,
+        "build_code_mode_transforms",
+        lambda *, enabled, server_id: ["CODE", server_id] if enabled else [],
+    )
+
+    proxy_map = f.build_proxy_map(config, session_store=None)
+
+    assert set(proxy_map.keys()) == {"a"}
+    assert proxy_ctor.calls[0]["transforms"] == ["CODE", "a"]

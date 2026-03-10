@@ -30,6 +30,7 @@ from ..config import (
 )
 from ..core.storage.store import SessionStore
 from .artifact_download_credentials import ArtifactDownloadCredentialManager
+from .code_mode import hide_upstream_tool_names
 from .factory import ProxyMount
 from .upload_credentials import UploadCredentialManager
 from .local_resources import register_upload_workflow_resource
@@ -147,7 +148,7 @@ def _upload_consumer_note(
     uri_prefix: bool | None,
     upload_endpoint_tool_name: str,
 ) -> str:
-    """Build the adapter guidance note injected into upload_consumer tool descriptions.
+    """Build explicit client-facing guidance for upload_consumer tools.
 
     Args:
         file_path_argument: Name of the file-path argument.
@@ -156,13 +157,14 @@ def _upload_consumer_note(
         upload_endpoint_tool_name: Server-specific upload tool name.
     """
     base_note = (
-        f"Adapter behavior: `{file_path_argument}` must use `{uri_scheme}` handles scoped to the current session. "
-        "Do not pass local filesystem paths. If unsure, call "
-        f"`{upload_endpoint_tool_name}`, upload file(s), "
-        f"then pass returned `{uri_scheme}` handles."
+        f"This tool requires `{uri_scheme}` upload handles in `{file_path_argument}`. "
+        f"Do not pass local filesystem paths, relative paths, HTTP URLs, or raw file bytes in `{file_path_argument}`. "
+        f"If you do not already have a `{uri_scheme}` handle for this session, call "
+        f"`{upload_endpoint_tool_name}` first, upload the file there, and then pass the returned "
+        f"`{uri_scheme}` handle to `{file_path_argument}`."
     )
     if uri_prefix:
-        return f"{base_note} Resolved local paths are forwarded upstream as `file://` URIs."
+        return f"{base_note} The adapter resolves that handle and forwards it upstream as a `file://` URI."
     return base_note
 
 
@@ -204,7 +206,7 @@ def _annotate_schema_path_description(schema: dict[str, Any], dotted_path: str, 
 
         is_leaf = index == len(parts) - 1
         if is_leaf:
-            node["description"] = _append_description(node.get("description"), note)
+            node["description"] = note
             return True
 
         next_node = node
@@ -236,12 +238,12 @@ def _build_upload_consumer_override_tool(
         uri_prefix=adapter.uri_prefix,
         upload_endpoint_tool_name=upload_endpoint_tool_name,
     )
-    description = _append_description(upstream_tool.description, note)
+    description = note
     schema = _clone_input_schema(upstream_tool)
     if schema is not None:
         annotated = _annotate_schema_path_description(schema, adapter.file_path_argument, note)
         if not annotated:
-            schema["description"] = _append_description(schema.get("description"), note)
+            schema["description"] = note
 
     return OverrideTool.from_mcp_tool(
         upstream_tool,
@@ -615,6 +617,7 @@ async def wire_adapters(
                         upload_endpoint_tool_name=helper_tool_name,
                     )
                 )
+                hide_upstream_tool_names(proxy=mount.proxy, tool_names={tool_name})
                 registered_tools.add(tool_name)
 
         for adapter in artifact_producers:
@@ -645,6 +648,7 @@ async def wire_adapters(
                     telemetry=telemetry,
                 )
                 mount.proxy.add_tool(OverrideTool.from_mcp_tool(upstream_tool, handler=handler))
+                hide_upstream_tool_names(proxy=mount.proxy, tool_names={tool_name})
                 registered_tools.add(tool_name)
         server_status[server.id] = True
 

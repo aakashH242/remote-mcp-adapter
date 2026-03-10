@@ -121,6 +121,26 @@ core:
   allow_artifacts_download: false
 
   # ---------------------------------------------------------------------------
+  # Experimental Code Mode
+  # ---------------------------------------------------------------------------
+
+  # When true, the server exposes FastMCP Code Mode instead of the full direct
+  # tool list. Clients see a compact meta-surface such as `search`,
+  # `get_schema`, and `execute`, and use those meta-tools to discover and call
+  # the real tool catalog on demand.
+  #
+  # The underlying tools still exist behind the Code Mode layer. Adapter-
+  # wrapped tools remain the source of truth, and once an upload_consumer or
+  # artifact_producer override is registered, the upstream original with the
+  # same name is hidden so clients do not see duplicate entries.
+  #
+  # This is the global default. Individual servers can override it with
+  # servers[].code_mode_enabled.
+  #
+  # Optional. Default: false.
+  code_mode_enabled: false
+
+  # ---------------------------------------------------------------------------
   # Upload endpoint path
   # ---------------------------------------------------------------------------
 
@@ -989,9 +1009,21 @@ servers:
       tool_call_timeout_seconds: null
 
       # Raw output flag for all adapter-wrapped tools on this server.
-      # null inherits from core.defaults.allow_raw_output.
-      # Optional.  Default: null.
-      allow_raw_output: null
+    # null inherits from core.defaults.allow_raw_output.
+    # Optional.  Default: null.
+    allow_raw_output: null
+
+    # -------------------------------------------------------------------------
+    # code_mode_enabled -- per-server Code Mode override
+    # -------------------------------------------------------------------------
+    # null inherits core.code_mode_enabled.
+    # true collapses this server's visible tool surface into FastMCP Code Mode
+    # discovery and execute tools only.
+    # false forces normal direct tool listing for this server even if the
+    # global core default is enabled.
+    #
+    # Optional. Default: null.
+    code_mode_enabled: null
 
     # -------------------------------------------------------------------------
     # disabled_tools -- tool-level suppression list

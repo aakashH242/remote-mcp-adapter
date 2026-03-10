@@ -86,6 +86,7 @@ class CoreConfig(BaseModel):
     cleanup_interval_seconds: int | None = Field(default=60, gt=0)
     public_base_url: str | None = None
     allow_artifacts_download: bool = False
+    code_mode_enabled: bool = False
     upload_path: str = "/upload"
     upstream_metadata_cache_ttl_seconds: int = Field(default=300, ge=0)
     upstream_ping: UpstreamPingConfig = Field(default_factory=UpstreamPingConfig)
