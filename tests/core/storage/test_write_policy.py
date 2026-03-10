@@ -1,8 +1,6 @@
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
-from pathlib import Path
-from types import SimpleNamespace
 
 import pytest
 from fastmcp.exceptions import ToolError

@@ -128,6 +128,7 @@ Example GitHub Copilot config:
 
 ## Next steps
 
+- **Previous topic:** [Private Demo Links Scenario](configuration/private-demo-links.md) - protected internal demo flow with human-clickable links.
+- **Next:** [Telemetry](telemetry.md) - see what the adapter emits once it is running.
 - **See also:** [Configuration](configuration.md) - practical config examples.
-- **See also:** [Config Reference](config-reference.md) - full `core.auth` reference.
-- **See also:** [Getting Started](getting-started.md) - IDE/agent connection examples.
+- **See also:** [Config Reference](configuration/config-reference.md) - full `core.auth` reference.

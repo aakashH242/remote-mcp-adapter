@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from types import SimpleNamespace
 
 import pytest
@@ -103,6 +104,13 @@ def _request(path="/x", method="GET", headers=None, query=None):
     )
 
 
+async def _async_result(value):
+    """Return one async result without repeating asyncio.sleep boilerplate."""
+
+    await asyncio.sleep(0)
+    return value
+
+
 def _context():
     app = _DummyApp()
     return SimpleNamespace(
@@ -128,16 +136,76 @@ def test_telemetry_server_id_for_path_and_known_servers(monkeypatch):
     known = {"s1"}
     mounts = {"/mcp/s1": "s1", "/mcp/sx": "sx"}
 
-    assert mr._telemetry_server_id_for_path(path="/mcp/s1/tools", mount_path_to_server_id=mounts, upload_path_prefix="/upload", known_server_ids=known) == "s1"
-    assert mr._telemetry_server_id_for_path(path="/mcp/sx/tools", mount_path_to_server_id=mounts, upload_path_prefix="/upload", known_server_ids=known) == "unknown"
+    assert (
+        mr._telemetry_server_id_for_path(
+            path="/mcp/s1/tools",
+            mount_path_to_server_id=mounts,
+            upload_path_prefix="/upload",
+            known_server_ids=known,
+        )
+        == "s1"
+    )
+    assert (
+        mr._telemetry_server_id_for_path(
+            path="/mcp/sx/tools",
+            mount_path_to_server_id=mounts,
+            upload_path_prefix="/upload",
+            known_server_ids=known,
+        )
+        == "unknown"
+    )
 
-    monkeypatch.setattr(mr, "parse_artifact_download_path", lambda path: ("s1", "sess", "a", "f") if path.startswith("/artifacts") else None)
-    assert mr._telemetry_server_id_for_path(path="/artifacts/s1/s/a/f", mount_path_to_server_id=mounts, upload_path_prefix="/upload", known_server_ids=known) == "s1"
+    monkeypatch.setattr(
+        mr,
+        "parse_artifact_download_path",
+        lambda path: ("s1", "sess", "a", "f") if path.startswith("/artifacts") else None,
+    )
+    assert (
+        mr._telemetry_server_id_for_path(
+            path="/artifacts/s1/s/a/f",
+            mount_path_to_server_id=mounts,
+            upload_path_prefix="/upload",
+            known_server_ids=known,
+        )
+        == "s1"
+    )
 
-    assert mr._telemetry_server_id_for_path(path="/upload/s1", mount_path_to_server_id=mounts, upload_path_prefix="/upload", known_server_ids=known) == "s1"
-    assert mr._telemetry_server_id_for_path(path="/upload/sx", mount_path_to_server_id=mounts, upload_path_prefix="/upload", known_server_ids=known) == "unknown"
-    assert mr._telemetry_server_id_for_path(path="/uploadx/s1", mount_path_to_server_id=mounts, upload_path_prefix="/upload", known_server_ids=known) == "global"
-    assert mr._telemetry_server_id_for_path(path="/public", mount_path_to_server_id=mounts, upload_path_prefix="/upload", known_server_ids=known) == "global"
+    assert (
+        mr._telemetry_server_id_for_path(
+            path="/upload/s1",
+            mount_path_to_server_id=mounts,
+            upload_path_prefix="/upload",
+            known_server_ids=known,
+        )
+        == "s1"
+    )
+    assert (
+        mr._telemetry_server_id_for_path(
+            path="/upload/sx",
+            mount_path_to_server_id=mounts,
+            upload_path_prefix="/upload",
+            known_server_ids=known,
+        )
+        == "unknown"
+    )
+    assert (
+        mr._telemetry_server_id_for_path(
+            path="/uploadx/s1",
+            mount_path_to_server_id=mounts,
+            upload_path_prefix="/upload",
+            known_server_ids=known,
+        )
+        == "global"
+    )
+    assert (
+        mr._telemetry_server_id_for_path(
+            path="/public",
+            mount_path_to_server_id=mounts,
+            upload_path_prefix="/upload",
+            known_server_ids=known,
+        )
+        == "global"
+    )
 
     ctx = _context()
     ctx.upstream_health = {"s2": object()}
@@ -171,7 +239,11 @@ async def test_rejection_metric_and_response_helpers(monkeypatch):
     assert response.status_code == 403
 
     auth_calls = []
-    monkeypatch.setattr(mr, "record_auth_rejection", lambda **kwargs: auth_calls.append(kwargs) or __import__("asyncio").sleep(0))
+    monkeypatch.setattr(
+        mr,
+        "record_auth_rejection",
+        lambda **kwargs: auth_calls.append(kwargs) or _async_result(None),
+    )
     auth_response = await mr._auth_rejection_json_response(
         context=ctx,
         route_group="/g",
@@ -213,36 +285,60 @@ def test_authorize_signed_artifact_download(monkeypatch):
 async def test_evaluate_signed_upload_auth_paths(monkeypatch):
     ctx = _context()
     req = _request(path="/public")
-    assert await mr._evaluate_signed_upload_auth(context=ctx, request=req, route_group="/g", telemetry_server_id="s1") == (False, None)
+    assert await mr._evaluate_signed_upload_auth(
+        context=ctx,
+        request=req,
+        route_group="/g",
+        telemetry_server_id="s1",
+    ) == (False, None)
 
     req_upload_get = _request(path="/upload/s1", method="GET", headers={"mcp-session-id": "sess"}, query={})
-    assert await mr._evaluate_signed_upload_auth(context=ctx, request=req_upload_get, route_group="/g", telemetry_server_id="s1") == (False, None)
+    assert await mr._evaluate_signed_upload_auth(
+        context=ctx, request=req_upload_get, route_group="/g", telemetry_server_id="s1"
+    ) == (False, None)
 
     req_upload = _request(path="/upload/s1", method="POST", headers={"mcp-session-id": "sess"}, query={})
     ctx.resolved_config.core.auth.enabled = False
-    assert await mr._evaluate_signed_upload_auth(context=ctx, request=req_upload, route_group="/g", telemetry_server_id="s1") == (False, None)
+    assert await mr._evaluate_signed_upload_auth(
+        context=ctx, request=req_upload, route_group="/g", telemetry_server_id="s1"
+    ) == (False, None)
 
     ctx.resolved_config.core.auth.enabled = True
-    assert await mr._evaluate_signed_upload_auth(context=ctx, request=req_upload, route_group="/g", telemetry_server_id="s1") == (False, None)
+    assert await mr._evaluate_signed_upload_auth(
+        context=ctx, request=req_upload, route_group="/g", telemetry_server_id="s1"
+    ) == (False, None)
 
     ctx.upload_credentials = _UploadCreds(enabled=False, valid=True)
-    assert await mr._evaluate_signed_upload_auth(context=ctx, request=req_upload, route_group="/g", telemetry_server_id="s1") == (False, None)
+    assert await mr._evaluate_signed_upload_auth(
+        context=ctx, request=req_upload, route_group="/g", telemetry_server_id="s1"
+    ) == (False, None)
 
     ctx.upload_credentials = _UploadCreds(enabled=True, valid=True)
-    ok = await mr._evaluate_signed_upload_auth(context=ctx, request=req_upload, route_group="/g", telemetry_server_id="s1")
+    ok = await mr._evaluate_signed_upload_auth(
+        context=ctx,
+        request=req_upload,
+        route_group="/g",
+        telemetry_server_id="s1",
+    )
     assert ok == (True, None)
 
     ctx.upload_credentials = _UploadCreds(enabled=True, valid=False)
-    bad, resp = await mr._evaluate_signed_upload_auth(context=ctx, request=req_upload, route_group="/g", telemetry_server_id="s1")
+    bad, resp = await mr._evaluate_signed_upload_auth(
+        context=ctx, request=req_upload, route_group="/g", telemetry_server_id="s1"
+    )
     assert bad is False and isinstance(resp, JSONResponse) and resp.status_code == 403
 
     ctx.upload_credentials = _UploadCreds(enabled=True, raises=True)
-    bad2, resp2 = await mr._evaluate_signed_upload_auth(context=ctx, request=req_upload, route_group="/g", telemetry_server_id="s1")
+    bad2, resp2 = await mr._evaluate_signed_upload_auth(
+        context=ctx, request=req_upload, route_group="/g", telemetry_server_id="s1"
+    )
     assert bad2 is False and isinstance(resp2, JSONResponse) and resp2.status_code == 503
 
     ctx.upload_path_prefix = "/upload"
     req_non_upload = _request(path="/uploadx/s1", method="POST", headers={"mcp-session-id": "sess"}, query={})
-    assert await mr._evaluate_signed_upload_auth(context=ctx, request=req_non_upload, route_group="/g", telemetry_server_id="s1") == (False, None)
+    assert await mr._evaluate_signed_upload_auth(
+        context=ctx, request=req_non_upload, route_group="/g", telemetry_server_id="s1"
+    ) == (False, None)
 
 
 @pytest.mark.asyncio
@@ -256,15 +352,23 @@ async def test_in_flight_rejection_helpers(monkeypatch):
     assert await mr._reject_in_flight_for_fail_closed(context=ctx, request=req, matched_server_id=None) is None
 
     marker = JSONResponse(status_code=503, content={"detail": "x"})
-    monkeypatch.setattr(mr, "_rejection_json_response", lambda **kwargs: __import__("asyncio").sleep(0, result=marker))
+    monkeypatch.setattr(
+        mr,
+        "_rejection_json_response",
+        lambda **kwargs: _async_result(marker),
+    )
     assert await mr._reject_in_flight_for_fail_closed(context=ctx, request=req, matched_server_id="s1") is marker
 
     ctx.upstream_health = {}
     assert await mr._reject_in_flight_for_breaker(context=ctx, request=req, matched_server_id=None) is None
     assert await mr._reject_in_flight_for_breaker(context=ctx, request=req, matched_server_id="s1") is None
-    ctx.upstream_health = {"s1": SimpleNamespace(allow_proxy_request=lambda: __import__("asyncio").sleep(0, result=(True, None)))}
+    ctx.upstream_health = {
+        "s1": SimpleNamespace(allow_proxy_request=lambda: _async_result((True, None)))
+    }
     assert await mr._reject_in_flight_for_breaker(context=ctx, request=req, matched_server_id="s1") is None
-    ctx.upstream_health = {"s1": SimpleNamespace(allow_proxy_request=lambda: __import__("asyncio").sleep(0, result=(False, "blocked")))}
+    ctx.upstream_health = {
+        "s1": SimpleNamespace(allow_proxy_request=lambda: _async_result((False, "blocked")))
+    }
     assert await mr._reject_in_flight_for_breaker(context=ctx, request=req, matched_server_id="s1") is marker
 
 
@@ -287,23 +391,51 @@ async def test_begin_end_track_in_flight_and_process_auth(monkeypatch):
     assert isinstance(response2, JSONResponse) and response2.status_code == 429
 
     ctx.session_store.begin_exc = RuntimeError("x")
-    monkeypatch.setattr(mr, "apply_runtime_failure_policy_if_persistent_backend", lambda **kwargs: __import__("asyncio").sleep(0, result=True))
-    monkeypatch.setattr(mr, "persistence_backend_operation_failed_response", lambda: JSONResponse(status_code=503, content={"detail": "p"}))
+    monkeypatch.setattr(
+        mr,
+        "apply_runtime_failure_policy_if_persistent_backend",
+        lambda **kwargs: _async_result(True),
+    )
+    monkeypatch.setattr(
+        mr,
+        "persistence_backend_operation_failed_response",
+        lambda: JSONResponse(status_code=503, content={"detail": "p"}),
+    )
     response3 = await mr._begin_in_flight_or_reject(context=ctx, request=req, matched_server_id="s1", session_id="sess")
     assert response3.status_code == 503
 
     ctx.session_store.begin_exc = RuntimeError("x")
-    monkeypatch.setattr(mr, "apply_runtime_failure_policy_if_persistent_backend", lambda **kwargs: __import__("asyncio").sleep(0, result=False))
+    monkeypatch.setattr(
+        mr,
+        "apply_runtime_failure_policy_if_persistent_backend",
+        lambda **kwargs: _async_result(False),
+    )
     with pytest.raises(RuntimeError):
         await mr._begin_in_flight_or_reject(context=ctx, request=req, matched_server_id="s1", session_id="sess")
 
     ctx.session_store.end_exc = RuntimeError("x")
     await mr._end_in_flight_best_effort(context=ctx, matched_server_id="s1", session_id="sess")
 
-    monkeypatch.setattr(mr, "_reject_in_flight_for_fail_closed", lambda **kwargs: __import__("asyncio").sleep(0, result=None))
-    monkeypatch.setattr(mr, "_reject_in_flight_for_breaker", lambda **kwargs: __import__("asyncio").sleep(0, result=None))
-    monkeypatch.setattr(mr, "_begin_in_flight_or_reject", lambda **kwargs: __import__("asyncio").sleep(0, result=None))
-    monkeypatch.setattr(mr, "_end_in_flight_best_effort", lambda **kwargs: __import__("asyncio").sleep(0))
+    monkeypatch.setattr(
+        mr,
+        "_reject_in_flight_for_fail_closed",
+        lambda **kwargs: _async_result(None),
+    )
+    monkeypatch.setattr(
+        mr,
+        "_reject_in_flight_for_breaker",
+        lambda **kwargs: _async_result(None),
+    )
+    monkeypatch.setattr(
+        mr,
+        "_begin_in_flight_or_reject",
+        lambda **kwargs: _async_result(None),
+    )
+    monkeypatch.setattr(
+        mr,
+        "_end_in_flight_best_effort",
+        lambda **kwargs: _async_result(None),
+    )
 
     tracked = await mr._track_in_flight_request(context=ctx, request=req, call_next=call_next)
     assert tracked.status_code == 200
@@ -324,14 +456,26 @@ async def test_begin_end_track_in_flight_and_process_auth(monkeypatch):
     assert (await mr._process_auth_request(context=ctx, request=req, call_next=call_next)).status_code == 200
 
     monkeypatch.setattr(mr, "_authorize_signed_artifact_download", lambda **kwargs: False)
-    monkeypatch.setattr(mr, "_evaluate_signed_upload_auth", lambda **kwargs: __import__("asyncio").sleep(0, result=(True, None)))
+    monkeypatch.setattr(
+        mr,
+        "_evaluate_signed_upload_auth",
+        lambda **kwargs: _async_result((True, None)),
+    )
     assert (await mr._process_auth_request(context=ctx, request=req, call_next=call_next)).status_code == 200
 
     reject = JSONResponse(status_code=403, content={"detail": "bad"})
-    monkeypatch.setattr(mr, "_evaluate_signed_upload_auth", lambda **kwargs: __import__("asyncio").sleep(0, result=(False, reject)))
+    monkeypatch.setattr(
+        mr,
+        "_evaluate_signed_upload_auth",
+        lambda **kwargs: _async_result((False, reject)),
+    )
     assert (await mr._process_auth_request(context=ctx, request=req, call_next=call_next)).status_code == 403
 
-    monkeypatch.setattr(mr, "_evaluate_signed_upload_auth", lambda **kwargs: __import__("asyncio").sleep(0, result=(False, None)))
+    monkeypatch.setattr(
+        mr,
+        "_evaluate_signed_upload_auth",
+        lambda **kwargs: _async_result((False, None)),
+    )
 
     def raise_auth(request, config):
         raise HTTPException(status_code=403, detail="forbidden")
@@ -354,20 +498,44 @@ async def test_track_in_flight_short_circuit_paths(monkeypatch):
         return JSONResponse(status_code=200, content={"ok": True})
 
     fail_closed = JSONResponse(status_code=503, content={"detail": "fc"})
-    monkeypatch.setattr(mr, "_reject_in_flight_for_fail_closed", lambda **kwargs: __import__("asyncio").sleep(0, result=fail_closed))
+    monkeypatch.setattr(
+        mr,
+        "_reject_in_flight_for_fail_closed",
+        lambda **kwargs: _async_result(fail_closed),
+    )
     response = await mr._track_in_flight_request(context=ctx, request=req, call_next=call_next)
     assert response is fail_closed
 
-    monkeypatch.setattr(mr, "_reject_in_flight_for_fail_closed", lambda **kwargs: __import__("asyncio").sleep(0, result=None))
+    monkeypatch.setattr(
+        mr,
+        "_reject_in_flight_for_fail_closed",
+        lambda **kwargs: _async_result(None),
+    )
     breaker = JSONResponse(status_code=503, content={"detail": "breaker"})
-    monkeypatch.setattr(mr, "_reject_in_flight_for_breaker", lambda **kwargs: __import__("asyncio").sleep(0, result=breaker))
+    monkeypatch.setattr(
+        mr,
+        "_reject_in_flight_for_breaker",
+        lambda **kwargs: _async_result(breaker),
+    )
     response2 = await mr._track_in_flight_request(context=ctx, request=req, call_next=call_next)
     assert response2 is breaker
 
-    monkeypatch.setattr(mr, "_reject_in_flight_for_breaker", lambda **kwargs: __import__("asyncio").sleep(0, result=None))
+    monkeypatch.setattr(
+        mr,
+        "_reject_in_flight_for_breaker",
+        lambda **kwargs: _async_result(None),
+    )
     begin_reject = JSONResponse(status_code=429, content={"detail": "limit"})
-    monkeypatch.setattr(mr, "_begin_in_flight_or_reject", lambda **kwargs: __import__("asyncio").sleep(0, result=begin_reject))
-    monkeypatch.setattr(mr, "_end_in_flight_best_effort", lambda **kwargs: __import__("asyncio").sleep(0))
+    monkeypatch.setattr(
+        mr,
+        "_begin_in_flight_or_reject",
+        lambda **kwargs: _async_result(begin_reject),
+    )
+    monkeypatch.setattr(
+        mr,
+        "_end_in_flight_best_effort",
+        lambda **kwargs: _async_result(None),
+    )
     response3 = await mr._track_in_flight_request(context=ctx, request=req, call_next=call_next)
     assert response3 is begin_reject
 
@@ -408,6 +576,7 @@ async def test_register_middleware_functions_and_stack(monkeypatch):
         await by_name["request_telemetry"](_request(path="/mcp/s1/tools"), raising_next)
 
     req_cancel = _request(path="/mcp/s1/tools", method="POST", headers={"mcp-session-id": "sess"})
+
     async def cancel_body():
         return b"{}"
 
@@ -420,6 +589,7 @@ async def test_register_middleware_functions_and_stack(monkeypatch):
 
     # no session header path
     req_no_session = _request(path="/mcp/s1/tools", method="POST", headers={})
+
     async def no_session_body():
         return b"{}"
 
@@ -443,10 +613,18 @@ async def test_register_middleware_functions_and_stack(monkeypatch):
     ok = await by_name["persistence_fail_closed_guard"](_request(path="/mcp/s1/tools"), call_next)
     assert ok.status_code == 200
 
-    monkeypatch.setattr(mr, "_track_in_flight_request", lambda **kwargs: __import__("asyncio").sleep(0, result=JSONResponse(status_code=201, content={})))
+    monkeypatch.setattr(
+        mr,
+        "_track_in_flight_request",
+        lambda **kwargs: _async_result(JSONResponse(status_code=201, content={})),
+    )
     tracked = await by_name["track_in_flight"](_request(path="/mcp/s1/tools"), call_next)
     assert tracked.status_code == 201
 
-    monkeypatch.setattr(mr, "_process_auth_request", lambda **kwargs: __import__("asyncio").sleep(0, result=JSONResponse(status_code=202, content={})))
+    monkeypatch.setattr(
+        mr,
+        "_process_auth_request",
+        lambda **kwargs: _async_result(JSONResponse(status_code=202, content={})),
+    )
     authed = await by_name["auth_middleware"](_request(path="/mcp/s1/tools"), call_next)
     assert authed.status_code == 202

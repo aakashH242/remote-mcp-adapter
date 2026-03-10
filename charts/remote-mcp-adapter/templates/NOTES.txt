@@ -1,0 +1,64 @@
+{{- $fullName := include "remote-mcp-adapter.fullname" . -}}
+{{- $namespace := include "remote-mcp-adapter.namespace" . -}}
+{{- $servicePort := .Values.service.port -}}
+{{- $configPath := include "remote-mcp-adapter.configFilePath" . -}}
+{{- $configDir := include "remote-mcp-adapter.configDirectory" . -}}
+{{- $sharedMountPath := include "remote-mcp-adapter.sharedMountPath" . -}}
+{{- $serviceType := .Values.service.type | default "ClusterIP" -}}
+✅ Thank you for installing remote-mcp-adapter.
+
+📦 Release:
+  Name: {{ .Release.Name }}
+  Namespace: {{ $namespace }}
+  Deployment mode: {{ .Values.deploymentMode }}
+
+🧩 Resources:
+  Deployment: {{ $fullName }}
+  Service: {{ $fullName }}
+  ConfigMap: {{ include "remote-mcp-adapter.configMapName" . }}
+
+⚙️ Adapter configuration:
+  Mounted directory: {{ $configDir }}
+  Config file: {{ $configPath }}
+  Shared storage root: {{ $sharedMountPath }}
+
+{{- if eq .Values.deploymentMode "standalone" }}
+🧪 Standalone upstream containers:
+{{- range $index, $upstream := (.Values.upstreamServers | default (list)) }}
+  - {{ default (printf "upstream-%d" (add1 $index)) $upstream.name }}
+{{- end }}
+{{- else }}
+🌐 Distributed mode:
+  Upstream MCP servers are expected to be deployed and reachable separately.
+{{- end }}
+
+{{- if .Values.ingress.enabled }}
+🔗 Ingress access:
+{{- range .Values.ingress.hosts }}
+  - {{ .host }}{{- range .paths }}{{ .path }} {{- end }}
+{{- end }}
+{{- if .Values.ingress.tls }}
+  🔒 TLS secrets:
+{{- range .Values.ingress.tls }}
+    - {{ .secretName }}
+{{- end }}
+{{- end }}
+{{- else }}
+🚪 Service access:
+  Type: {{ $serviceType }}
+{{- if eq $serviceType "LoadBalancer" }}
+  Use `kubectl get svc {{ $fullName }} -n {{ $namespace }}` to find the external address.
+{{- else if eq $serviceType "NodePort" }}
+  Use `kubectl get svc {{ $fullName }} -n {{ $namespace }}` to find the assigned node port.
+{{- else }}
+  Port-forward locally with:
+    kubectl port-forward -n {{ $namespace }} svc/{{ $fullName }} 8932:{{ $servicePort }}
+  Then open:
+    http://127.0.0.1:8932/healthz
+{{- end }}
+{{- end }}
+
+🛠️ Useful commands:
+  kubectl get pods -n {{ $namespace }} -l app.kubernetes.io/instance={{ .Release.Name }}
+  kubectl describe deployment {{ $fullName }} -n {{ $namespace }}
+  kubectl logs -n {{ $namespace }} deploy/{{ $fullName }}

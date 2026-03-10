@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
@@ -28,7 +27,14 @@ def test_path_and_text_helpers(tmp_path):
     assert ap._looks_path_like(" /tmp/a ") is True
     assert ap._looks_path_like(" ") is False
 
-    assert ap._extract_structured_fallback_path(ToolResult(content=[], structured_content={"a": {"b": "/tmp/x"}}, meta={})) == "/tmp/x"
+    structured_path = ap._extract_structured_fallback_path(
+        ToolResult(
+            content=[],
+            structured_content={"a": {"b": "/tmp/x"}},
+            meta={},
+        )
+    )
+    assert structured_path == "/tmp/x"
 
     assert ap._safe_name_from_argument("/tmp/a.txt") == "a.txt"
     assert ap._safe_name_from_argument(1) is None
@@ -36,10 +42,18 @@ def test_path_and_text_helpers(tmp_path):
 
 @pytest.mark.asyncio
 async def test_embedded_extract_and_materialize(tmp_path, monkeypatch):
-    image_res = ToolResult(content=[ImageContent(type="image", data="YWJj", mimeType="image/png")], structured_content={}, meta={})
+    image_res = ToolResult(
+        content=[ImageContent(type="image", data="YWJj", mimeType="image/png")],
+        structured_content={},
+        meta={},
+    )
     data, mime = await ap._extract_embedded_bytes(image_res)
     assert data == b"abc" and mime == "image/png"
-    jpeg_res = ToolResult(content=[ImageContent(type="image", data="YWJj", mimeType="image/jpeg")], structured_content={}, meta={})
+    jpeg_res = ToolResult(
+        content=[ImageContent(type="image", data="YWJj", mimeType="image/jpeg")],
+        structured_content={},
+        meta={},
+    )
     data_jpeg, mime_jpeg = await ap._extract_embedded_bytes(jpeg_res)
     assert data_jpeg == b"abc" and mime_jpeg == "image/jpeg"
 
@@ -47,11 +61,11 @@ async def test_embedded_extract_and_materialize(tmp_path, monkeypatch):
         content=[
             EmbeddedResource(
                 type="resource",
-                    resource=BlobResourceContents(
-                        uri="https://example.com/blob",
-                        blob="YWJj",
-                        mimeType="application/octet-stream",
-                    ),
+                resource=BlobResourceContents(
+                    uri="https://example.com/blob",
+                    blob="YWJj",
+                    mimeType="application/octet-stream",
+                ),
             )
         ],
         structured_content={},
@@ -64,7 +78,7 @@ async def test_embedded_extract_and_materialize(tmp_path, monkeypatch):
         content=[
             EmbeddedResource(
                 type="resource",
-                    resource=TextResourceContents(uri="https://example.com/text", text="hi", mimeType="text/plain"),
+                resource=TextResourceContents(uri="https://example.com/text", text="hi", mimeType="text/plain"),
             )
         ],
         structured_content={},
@@ -73,7 +87,11 @@ async def test_embedded_extract_and_materialize(tmp_path, monkeypatch):
     data3, mime3 = await ap._extract_embedded_bytes(text_res)
     assert data3 == b"hi" and mime3 == "text/plain"
 
-    dict_res = ToolResult(content=[{"type": "image", "data": "YWJj", "mimeType": "image/png"}], structured_content={}, meta={})
+    dict_res = ToolResult(
+        content=[{"type": "image", "data": "YWJj", "mimeType": "image/png"}],
+        structured_content={},
+        meta={},
+    )
     assert await ap._extract_embedded_bytes(dict_res) is None
 
     empty_res = ToolResult(content=[{"type": "other"}], structured_content={}, meta={})
@@ -98,12 +116,28 @@ async def test_embedded_extract_and_materialize(tmp_path, monkeypatch):
 
 
 def test_locator_helpers(tmp_path):
-    adapter_struct = SimpleNamespace(output_locator=SimpleNamespace(mode="structured", output_path_key="a.b", output_path_regexes=[]))
+    adapter_struct = SimpleNamespace(
+        output_locator=SimpleNamespace(
+            mode="structured",
+            output_path_key="a.b",
+            output_path_regexes=[],
+        )
+    )
     result = ToolResult(content=[], structured_content={"a": {"b": "/tmp/out.bin"}}, meta={})
     assert ap._extract_locator_path(result, adapter_struct) == "/tmp/out.bin"
 
-    adapter_regex = SimpleNamespace(output_locator=SimpleNamespace(mode="regex", output_path_key=None, output_path_regexes=[r"path=(/tmp/[^\s]+)"]))
-    result2 = ToolResult(content=[TextContent(type="text", text="path=/tmp/a.txt")], structured_content={}, meta={})
+    adapter_regex = SimpleNamespace(
+        output_locator=SimpleNamespace(
+            mode="regex",
+            output_path_key=None,
+            output_path_regexes=[r"path=(/tmp/[^\s]+)"],
+        )
+    )
+    result2 = ToolResult(
+        content=[TextContent(type="text", text="path=/tmp/a.txt")],
+        structured_content={},
+        meta={},
+    )
     assert ap._extract_locator_path(result2, adapter_regex) == "/tmp/a.txt"
 
     assert "a.txt" in str(ap._normalize_locator_path('"/tmp/a.txt",'))

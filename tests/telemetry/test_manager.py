@@ -56,7 +56,13 @@ async def test_start_shutdown_and_enqueue_paths(monkeypatch):
     telemetry.record_persistence_policy_transition_nowait(action="a", source="s", policy="p", configured_backend="disk")
     await telemetry.record_nonce_operation(operation="consume", result="ok", backend="mem")
     await telemetry.record_upload_credential_event(operation="validate", result="ok", backend="mem")
-    await telemetry.record_artifact_download(server_id="s1", result="ok", auth_mode="session", duration_seconds=-1, size_bytes=-3)
+    await telemetry.record_artifact_download(
+        server_id="s1",
+        result="ok",
+        auth_mode="session",
+        duration_seconds=-1,
+        size_bytes=-3,
+    )
     await telemetry.record_upload_failure(server_id="s1", reason="bad")
     await telemetry.record_request_rejection(server_id="s1", route_group="/g", reason="x", status_code=503)
     await telemetry.record_adapter_wiring_run(result="ok", total_servers=-1, not_ready_servers=-2)

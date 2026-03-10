@@ -8,9 +8,23 @@ repos:
         pass_filenames: false
         stages: [pre-commit]
 
+      - id: render-config-reference
+        name: render config reference
+        entry: uv run render-config-reference
+        language: system
+        pass_filenames: false
+        stages: [pre-commit]
+
+      - id: mkdocs-build-strict
+        name: mkdocs build --strict
+        entry: uv run mkdocs build --strict
+        language: system
+        pass_filenames: false
+        stages: [pre-commit]
+
       - id: test-coverage
-        name: tests with coverage (>=80%)
-        entry: uv run pytest --cov=src/remote_mcp_adapter --cov-report=term-missing --cov-fail-under=80
+        name: tests with coverage (>=90%)
+        entry: uv run pytest --cov=src/remote_mcp_adapter --cov-report=term-missing --cov-fail-under=90
         language: system
         pass_filenames: false
         stages: [pre-commit]

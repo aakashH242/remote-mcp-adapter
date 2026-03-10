@@ -9,6 +9,8 @@ from dataclasses import dataclass
 import logging
 from typing import Any
 
+from ..config.schemas.root import AdapterConfig
+from ..config.schemas.telemetry import TelemetryConfig
 from ..constants import GLOBAL_SERVER_ID
 from .event_dispatch import handle_event
 from .otel_bootstrap import create_metric_instruments, initialize_metrics_backend, setup_log_export
@@ -27,7 +29,7 @@ class TelemetryEvent:
 class AdapterTelemetry:
     """Async telemetry facade for OpenTelemetry metrics and optional log export."""
 
-    def __init__(self, *, config) -> None:
+    def __init__(self, *, config: TelemetryConfig) -> None:
         """Initialize the telemetry manager.
 
         Args:
@@ -71,7 +73,7 @@ class AdapterTelemetry:
         self._sessions_lifecycle_total = None
 
     @classmethod
-    def from_config(cls, resolved_config) -> "AdapterTelemetry":
+    def from_config(cls, resolved_config: AdapterConfig) -> "AdapterTelemetry":
         """Construct telemetry manager from adapter config.
 
         Args:

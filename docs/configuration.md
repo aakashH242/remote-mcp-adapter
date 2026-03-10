@@ -1,6 +1,6 @@
-# Configuration
+# Sections
 
-**What you'll learn here:** how to write a working `config.yaml` quickly, what the required fields are, and the most common configuration mistakes.
+**What you'll learn here:** the different configuration sections, how to write a working `config.yaml` quickly, what the required fields are, and the most common configuration mistakes.
 
 ---
 
@@ -92,6 +92,8 @@ state_persistence:
     port: 6379
 ```
 
+If you enable upload helper tools or HTTP artifact download links, treat `core.public_base_url` as required in any non-trivial deployment. On localhost the adapter can often guess a usable URL. Behind Docker networking, a reverse proxy, ingress, or a load balancer, guessing is fragile. Set the public base URL to the exact external address your clients use.
+
 ---
 
 ## Override precedence
@@ -119,16 +121,54 @@ servers:
 
 ---
 
+## Tool discovery and description shaping
+
+Two optional config groups change how tool metadata is presented to agents.
+
+- `core.code_mode_enabled` enables FastMCP Code Mode globally. You can override it per server with `servers[].code_mode_enabled`.
+- In Code Mode, the adapter exposes server-prefixed synthetic tools such as `<server_id>_search`, `<server_id>_get_schema`, `<server_id>_tags`, `<server_id>_list_tools`, and `<server_id>_execute`.
+- `core.shorten_descriptions` enables shorter upload-consumer tool descriptions globally. You can override it per server with `servers[].shorten_descriptions`.
+- `core.short_description_max_tokens` and `servers[].short_description_max_tokens` control the token budget for that shortened first-sentence summary.
+
+Use these only when you need a smaller, cleaner tool surface for weaker models or coding agents. They do not change the underlying upload or artifact behavior.
+
+---
+
 ## Common mistakes
 
-⚠️ "Wrong `mount_path`"
-    The `mount_path` in your config must exactly match the URL your agent connects to. If your config says `/mcp/playwright` but your agent points at `/mcp/playwright-browser`, the adapter will return 404.
+!!! warning "Wrong `mount_path`"
+  The `mount_path` in your config must exactly match the URL your agent connects to. If your config says `/mcp/playwright` but your agent points at `/mcp/playwright-browser`, the adapter will return 404.
 
-⚠️ "Tool name mismatch"
-    Tool names in `adapters[].tools` must exactly match the names the upstream server reports in `list_tools`. A typo — `browser_screenshot` instead of `browser_take_screenshot` — means the adapter will never intercept that tool. The tool will still be callable as passthrough, but artifacts will not be captured.
+!!! warning "Tool name mismatch"
+  Tool names in `adapters[].tools` must exactly match the names the upstream server reports in `list_tools`. A typo — `browser_screenshot` instead of `browser_take_screenshot` — means the adapter will never intercept that tool. The tool will still be callable as passthrough, but artifacts will not be captured.
 
-⚠️ "Forgetting `adapters[]` entries"
-    If you do not add a tool to any `adapters[]` entry, the adapter treats it as passthrough. For tools that write files (like `browser_take_screenshot`), this means the artifact will be written to the server's disk and the client will receive a raw filesystem path it cannot read. Add the tool to an `artifact_producer` entry to enable artifact capture.
+!!! warning "Forgetting `adapters[]` entries"
+  If you do not add a tool to any `adapters[]` entry, the adapter treats it as passthrough. For tools that write files (like `browser_take_screenshot`), this means the artifact will be written to the server's disk and the client will receive a raw filesystem path it cannot read. Add the tool to an `artifact_producer` entry to enable artifact capture.
+
+!!! warning "Leaving `public_base_url` unset in real deployments"
+  If clients use `<server_id>_get_upload_url(...)` or HTTP download links through a proxy, ingress, or load balancer, the adapter needs `core.public_base_url` to build the right external URL. Without it, the generated URL may point at an internal container or pod address that the client cannot reach.
+
+---
+
+## Deployment scenarios
+
+If you want opinionated configuration profiles instead of field-by-field guidance, start with these scenario pages.
+
+- [Passthrough-Only Gateway Scenario](configuration/passthrough-only-gateway.md) - pure multi-server relay for teams that mainly want auth, routing, health, and circuit-breaker behavior.
+- [Local Dev Scenario](configuration/local-dev.md) - fastest path for local testing, debugging, and first-time setup.
+- [Single-Node Durable Scenario](configuration/single-node-durable.md) - one durable adapter node with auth, disk persistence, and real limits.
+- [Distributed Production Scenario](configuration/distributed-production.md) - multi-replica deployment with Redis-backed state and shared storage.
+- [High-Security Scenario](configuration/high-security.md) - security-focused hardening for auth, uploads, artifact access, and tool exposure.
+- [Restricted-Limits Scenario](configuration/restricted-limits.md) - tighter caps for sessions, uploads, artifacts, and total storage in shared environments.
+- [High-Observability Scenario](configuration/high-observability.md) - telemetry- and operations-focused visibility for production debugging and monitoring.
+- [Agent-Optimized Code Mode Scenario](configuration/agent-optimized-code-mode.md) - compact tool discovery for coding agents and smaller models.
+- [Public Demo Downloads Scenario](configuration/public-demo-downloads.md) - browser-facing demo profile with signed, human-clickable upload and artifact links.
+- [Private Demo Links Scenario](configuration/private-demo-links.md) - internal demo profile with reliable human-clickable links and protected access.
+- [Config Reference](configuration/config-reference.md) - exhaustive field-by-field reference to use alongside the scenario guides.
+
+Together, these pages let you move from the simplest relay shape to progressively more opinionated operating profiles.
+
+The detailed config reference page is generated from `config.yaml.template`. If you change the template, regenerate the page instead of editing the reference markdown by hand.
 
 ---
 
@@ -247,6 +287,6 @@ state_persistence:
 
 ## Next steps
 
-- **Next:** [Config Reference](config-reference.md) — every field, default, and constraint.
+- **Next:** [Detailed Reference](configuration/config-reference.md) — every field, default, and constraint.
 - **See also:** [Security](security.md) — enable bearer token auth.
 - **See also:** [Telemetry](telemetry.md) — enable OpenTelemetry metrics.

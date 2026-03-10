@@ -19,7 +19,7 @@ def _import_redis_asyncio() -> Any:
         from redis import asyncio as redis_asyncio  # type: ignore[import-not-found]
     except ModuleNotFoundError as exc:  # pragma: no cover - exercised in runtime environments
         raise RedisDependencyError(
-            "Redis persistence requires the 'redis' package. " "Install with: pip install redis>=5.0.0"
+            "Redis persistence requires the 'redis' package. Install with: pip install redis>=5.0.0"
         ) from exc
     return redis_asyncio
 

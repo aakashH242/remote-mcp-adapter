@@ -43,7 +43,7 @@ services:
       - "8932:8932"
     volumes:
       - ./data:/shared
-      - ./config.yaml:/etc/config.yaml
+      - ./config.yaml:/etc/remote-mcp-adapter/config.yaml
     depends_on:
       - playwright
     restart: "unless-stopped"

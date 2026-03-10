@@ -1,0 +1,48 @@
+# Example values file for the Standalone Durable Service Helm scenario.
+# This is a base shape. You can use it directly with the chart.
+
+deploymentMode: standalone
+replicaCount: 1
+
+persistence:
+  enabled: true
+  size: 20Gi
+
+environment:
+  envFromSecret:
+    name: remote-mcp-adapter-env
+    keys: [MCP_ADAPTER_TOKEN, MCP_ADAPTER_SIGNING_SECRET]
+
+ingress:
+  enabled: true
+  className: nginx
+  hosts:
+    - host: mcp-adapter.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: remote-mcp-adapter-tls
+      hosts:
+        - mcp-adapter.example.com
+
+config:
+  config.yaml:
+    core:
+      public_base_url: https://mcp-adapter.example.com
+      allow_artifacts_download: true
+      auth:
+        enabled: true
+        token: ${MCP_ADAPTER_TOKEN}
+        signing_secret: ${MCP_ADAPTER_SIGNING_SECRET}
+    storage:
+      root: /data/shared
+      max_size: 10Gi
+    state_persistence:
+      type: disk
+    sessions:
+      max_active: 100
+      idle_ttl_seconds: 1800
+      max_total_session_size: 500Mi
+    artifacts:
+      max_per_session: 50

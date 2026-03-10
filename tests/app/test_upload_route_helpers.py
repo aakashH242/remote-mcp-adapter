@@ -87,6 +87,17 @@ async def test_build_save_and_rollback_helpers(monkeypatch):
     assert calls
 
 
+def test_normalize_and_validate_sha256_helpers():
+    assert urh.normalize_sha256_inputs(None) == []
+    assert urh.normalize_sha256_inputs(["  abc  ", "", "   ", "def"]) == ["abc", "def"]
+
+    urh.validate_sha256_count(files_count=2, sha256_values=[])
+    urh.validate_sha256_count(files_count=2, sha256_values=["abc", "def"])
+
+    with pytest.raises(HTTPException, match="sha256 count mismatch"):
+        urh.validate_sha256_count(files_count=2, sha256_values=["abc"])
+
+
 @pytest.mark.asyncio
 async def test_rollback_and_policy_validation_and_close(monkeypatch):
     class _StoreErr:

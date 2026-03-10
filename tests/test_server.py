@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
+import pytest
+
 from remote_mcp_adapter import server
 
 
@@ -18,7 +20,13 @@ def test_create_app_happy_and_fallback(monkeypatch):
     monkeypatch.setattr(server, "resolve_config", lambda config, config_path: cfg)
     monkeypatch.setattr(server, "install_log_redaction_filter", lambda config: None)
     monkeypatch.setattr(server, "AdapterTelemetry", SimpleNamespace(from_config=lambda c: SimpleNamespace()))
-    monkeypatch.setattr(server, "PersistencePolicyController", lambda **kwargs: SimpleNamespace(handle_startup_failure=lambda **k: "continue_fail_closed"))
+    monkeypatch.setattr(
+        server,
+        "PersistencePolicyController",
+        lambda **kwargs: SimpleNamespace(
+            handle_startup_failure=lambda **k: "continue_fail_closed"
+        ),
+    )
 
     runtime = SimpleNamespace(state_repository=object(), lock_provider=object(), backend_type="disk")
     monkeypatch.setattr(server, "build_persistence_runtime", lambda c: runtime)
@@ -26,7 +34,14 @@ def test_create_app_happy_and_fallback(monkeypatch):
     monkeypatch.setattr(server, "resolve_storage_lock_mode", lambda c: "process")
 
     monkeypatch.setattr(server, "SessionStore", lambda *args, **kwargs: SimpleNamespace())
-    proxy_map = {"s1": SimpleNamespace(server=SimpleNamespace(mount_path="/mcp/s1"), proxy=SimpleNamespace(http_app=lambda **k: SimpleNamespace(routes=["r"])))}
+    proxy_map = {
+        "s1": SimpleNamespace(
+            server=SimpleNamespace(mount_path="/mcp/s1"),
+            proxy=SimpleNamespace(
+                http_app=lambda **k: SimpleNamespace(routes=["r"])
+            ),
+        )
+    }
     monkeypatch.setattr(server, "build_proxy_map", lambda cfg, session_store: proxy_map)
     monkeypatch.setattr(server, "build_upload_nonce_store", lambda **kwargs: object())
     monkeypatch.setattr(server, "UploadCredentialManager", SimpleNamespace(from_config=lambda *a, **k: object()))
@@ -55,3 +70,24 @@ def test_create_app_happy_and_fallback(monkeypatch):
     monkeypatch.setattr(server, "build_memory_persistence_runtime", lambda: runtime)
     app2 = server.create_app(cfg)
     assert app2.state.adapter_config is cfg
+
+
+def test_create_app_re_raises_when_persistence_policy_requests_exit(monkeypatch):
+    cfg = _config()
+
+    monkeypatch.setattr(server, "resolve_config", lambda config, config_path: cfg)
+    monkeypatch.setattr(server, "install_log_redaction_filter", lambda config: None)
+    monkeypatch.setattr(server, "AdapterTelemetry", SimpleNamespace(from_config=lambda c: SimpleNamespace()))
+    monkeypatch.setattr(
+        server,
+        "PersistencePolicyController",
+        lambda **kwargs: SimpleNamespace(handle_startup_failure=lambda **k: "exit"),
+    )
+
+    def raise_build(_):
+        raise RuntimeError("boom")
+
+    monkeypatch.setattr(server, "build_persistence_runtime", raise_build)
+
+    with pytest.raises(RuntimeError, match="boom"):
+        server.create_app(cfg)

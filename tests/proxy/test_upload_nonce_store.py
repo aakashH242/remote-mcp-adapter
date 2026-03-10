@@ -42,15 +42,9 @@ async def test_in_memory_backend_label():
 async def test_in_memory_reserve_and_collision_and_consume_success():
     store = uns.InMemoryUploadNonceStore()
 
-    first = await store.reserve_nonce(
-        nonce="n1", server_id="s", session_id="sess", expires_at=200, now_epoch=100
-    )
-    second = await store.reserve_nonce(
-        nonce="n1", server_id="s", session_id="sess", expires_at=200, now_epoch=100
-    )
-    consumed = await store.consume_nonce(
-        nonce="n1", server_id="s", session_id="sess", expires_at=200, now_epoch=100
-    )
+    first = await store.reserve_nonce(nonce="n1", server_id="s", session_id="sess", expires_at=200, now_epoch=100)
+    second = await store.reserve_nonce(nonce="n1", server_id="s", session_id="sess", expires_at=200, now_epoch=100)
+    consumed = await store.consume_nonce(nonce="n1", server_id="s", session_id="sess", expires_at=200, now_epoch=100)
 
     assert first is True
     assert second is False
@@ -61,25 +55,15 @@ async def test_in_memory_reserve_and_collision_and_consume_success():
 async def test_in_memory_consume_returns_false_for_missing_and_mismatch_and_expired():
     store = uns.InMemoryUploadNonceStore()
 
-    missing = await store.consume_nonce(
-        nonce="missing", server_id="s", session_id="sess", expires_at=1, now_epoch=1
-    )
+    missing = await store.consume_nonce(nonce="missing", server_id="s", session_id="sess", expires_at=1, now_epoch=1)
 
     await store.reserve_nonce(nonce="n2", server_id="s", session_id="sess", expires_at=200, now_epoch=100)
-    wrong_server = await store.consume_nonce(
-        nonce="n2", server_id="other", session_id="sess", expires_at=200, now_epoch=100
-    )
-    wrong_session = await store.consume_nonce(
-        nonce="n2", server_id="s", session_id="other", expires_at=200, now_epoch=100
-    )
-    wrong_expiry = await store.consume_nonce(
-        nonce="n2", server_id="s", session_id="sess", expires_at=201, now_epoch=100
-    )
+    wrong_server = await store.consume_nonce(nonce="n2", server_id="other", session_id="sess", expires_at=200, now_epoch=100)
+    wrong_session = await store.consume_nonce(nonce="n2", server_id="s", session_id="other", expires_at=200, now_epoch=100)
+    wrong_expiry = await store.consume_nonce(nonce="n2", server_id="s", session_id="sess", expires_at=201, now_epoch=100)
 
     await store.reserve_nonce(nonce="n3", server_id="s", session_id="sess", expires_at=50, now_epoch=49)
-    expired = await store.consume_nonce(
-        nonce="n3", server_id="s", session_id="sess", expires_at=50, now_epoch=51
-    )
+    expired = await store.consume_nonce(nonce="n3", server_id="s", session_id="sess", expires_at=50, now_epoch=51)
 
     assert missing is False
     assert wrong_server is False
@@ -106,18 +90,10 @@ async def test_sqlite_backend_and_initialization_and_reserve_consume(tmp_path):
     await store._ensure_initialized()
 
     assert db_path.exists()
-    inserted = await store.reserve_nonce(
-        nonce="n1", server_id="s", session_id="sess", expires_at=200, now_epoch=100
-    )
-    duplicate = await store.reserve_nonce(
-        nonce="n1", server_id="s", session_id="sess", expires_at=200, now_epoch=100
-    )
-    consumed = await store.consume_nonce(
-        nonce="n1", server_id="s", session_id="sess", expires_at=200, now_epoch=100
-    )
-    consumed_again = await store.consume_nonce(
-        nonce="n1", server_id="s", session_id="sess", expires_at=200, now_epoch=100
-    )
+    inserted = await store.reserve_nonce(nonce="n1", server_id="s", session_id="sess", expires_at=200, now_epoch=100)
+    duplicate = await store.reserve_nonce(nonce="n1", server_id="s", session_id="sess", expires_at=200, now_epoch=100)
+    consumed = await store.consume_nonce(nonce="n1", server_id="s", session_id="sess", expires_at=200, now_epoch=100)
+    consumed_again = await store.consume_nonce(nonce="n1", server_id="s", session_id="sess", expires_at=200, now_epoch=100)
 
     assert inserted is True
     assert duplicate is False
@@ -147,15 +123,9 @@ async def test_sqlite_consume_false_when_filters_do_not_match(tmp_path):
     store = uns.SqliteUploadNonceStore(db_path=tmp_path / "nonces.sqlite3")
     await store.reserve_nonce(nonce="n2", server_id="s", session_id="sess", expires_at=300, now_epoch=100)
 
-    bad_server = await store.consume_nonce(
-        nonce="n2", server_id="wrong", session_id="sess", expires_at=300, now_epoch=100
-    )
-    bad_session = await store.consume_nonce(
-        nonce="n2", server_id="s", session_id="wrong", expires_at=300, now_epoch=100
-    )
-    bad_expiry = await store.consume_nonce(
-        nonce="n2", server_id="s", session_id="sess", expires_at=301, now_epoch=100
-    )
+    bad_server = await store.consume_nonce(nonce="n2", server_id="wrong", session_id="sess", expires_at=300, now_epoch=100)
+    bad_session = await store.consume_nonce(nonce="n2", server_id="s", session_id="wrong", expires_at=300, now_epoch=100)
+    bad_expiry = await store.consume_nonce(nonce="n2", server_id="s", session_id="sess", expires_at=301, now_epoch=100)
 
     assert bad_server is False
     assert bad_session is False
@@ -169,12 +139,8 @@ async def test_sqlite_prunes_expired_rows_before_insert_and_consume(tmp_path):
     await store.reserve_nonce(nonce="old", server_id="s", session_id="sess", expires_at=50, now_epoch=10)
     await store.reserve_nonce(nonce="new", server_id="s", session_id="sess", expires_at=120, now_epoch=100)
 
-    old_consumed = await store.consume_nonce(
-        nonce="old", server_id="s", session_id="sess", expires_at=50, now_epoch=100
-    )
-    new_consumed = await store.consume_nonce(
-        nonce="new", server_id="s", session_id="sess", expires_at=120, now_epoch=100
-    )
+    old_consumed = await store.consume_nonce(nonce="old", server_id="s", session_id="sess", expires_at=50, now_epoch=100)
+    new_consumed = await store.consume_nonce(nonce="new", server_id="s", session_id="sess", expires_at=120, now_epoch=100)
 
     assert old_consumed is False
     assert new_consumed is True
@@ -189,9 +155,7 @@ async def test_redis_backend_key_payload_and_reserve_bool_and_ttl_floor():
     assert store._key("n1") == "kb:upload_nonces:n1"
     assert store._payload(server_id="s", session_id="sess", expires_at=105) == "s\x1fsess\x1f105"
 
-    reserved = await store.reserve_nonce(
-        nonce="n1", server_id="s", session_id="sess", expires_at=100, now_epoch=100
-    )
+    reserved = await store.reserve_nonce(nonce="n1", server_id="s", session_id="sess", expires_at=100, now_epoch=100)
     key, payload, ex, nx = redis.set_calls[-1]
 
     assert reserved is True
@@ -206,9 +170,7 @@ async def test_redis_reserve_false_when_set_returns_falsey():
     redis = FakeRedis(set_result=False)
     store = uns.RedisUploadNonceStore(redis_client=redis, key_prefix="kb:upload_nonces")
 
-    reserved = await store.reserve_nonce(
-        nonce="n2", server_id="s", session_id="sess", expires_at=120, now_epoch=100
-    )
+    reserved = await store.reserve_nonce(nonce="n2", server_id="s", session_id="sess", expires_at=120, now_epoch=100)
     assert reserved is False
 
 
@@ -219,15 +181,9 @@ async def test_redis_consume_returns_false_when_expired_or_no_match_and_true_whe
     redis_no = FakeRedis(eval_result=0)
     store_no = uns.RedisUploadNonceStore(redis_client=redis_no, key_prefix="kb:upload_nonces")
 
-    expired = await store_ok.consume_nonce(
-        nonce="n1", server_id="s", session_id="sess", expires_at=9, now_epoch=10
-    )
-    matched = await store_ok.consume_nonce(
-        nonce="n1", server_id="s", session_id="sess", expires_at=10, now_epoch=10
-    )
-    not_matched = await store_no.consume_nonce(
-        nonce="n2", server_id="s", session_id="sess", expires_at=20, now_epoch=10
-    )
+    expired = await store_ok.consume_nonce(nonce="n1", server_id="s", session_id="sess", expires_at=9, now_epoch=10)
+    matched = await store_ok.consume_nonce(nonce="n1", server_id="s", session_id="sess", expires_at=10, now_epoch=10)
+    not_matched = await store_no.consume_nonce(nonce="n2", server_id="s", session_id="sess", expires_at=20, now_epoch=10)
 
     assert expired is False
     assert matched is True

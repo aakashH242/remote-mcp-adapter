@@ -87,8 +87,10 @@ async def test_record_to_resource_reads_text(monkeypatch):
 
     monkeypatch.setattr(res, "get_context", lambda: SimpleNamespace(session_id="sess"))
     monkeypatch.setattr(res, "ensure_artifact_session_match", lambda **kwargs: None)
+
     async def fake_resolve(**kwargs):
         return record
+
     monkeypatch.setattr(res, "resolve_artifact_for_read", fake_resolve)
 
     class CapturedResource:
@@ -116,8 +118,10 @@ async def test_record_to_resource_reads_binary(monkeypatch):
 
     monkeypatch.setattr(res, "get_context", lambda: SimpleNamespace(session_id="sess"))
     monkeypatch.setattr(res, "ensure_artifact_session_match", lambda **kwargs: None)
+
     async def fake_resolve(**kwargs):
         return record
+
     monkeypatch.setattr(res, "resolve_artifact_for_read", fake_resolve)
 
     class CapturedResource:
@@ -220,7 +224,12 @@ async def test_get_resource_covers_all_paths(monkeypatch):
     record_visible = _record(expose=True)
     record_hidden = _record(expose=False)
 
-    provider_disabled = res.SessionArtifactProvider(store=_FakeStore(), server_id="srv", uri_scheme="artifact://", enabled=False)
+    provider_disabled = res.SessionArtifactProvider(
+        store=_FakeStore(),
+        server_id="srv",
+        uri_scheme="artifact://",
+        enabled=False,
+    )
     assert await provider_disabled._get_resource("artifact://sessions/sess/a1/f.txt") is None
 
     provider = res.SessionArtifactProvider(store=_FakeStore(), server_id="srv", uri_scheme="artifact://", enabled=True)

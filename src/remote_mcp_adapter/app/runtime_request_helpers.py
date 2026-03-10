@@ -31,7 +31,7 @@ def validate_adapter_auth(request: Request, config: AdapterConfig) -> None:
     if provided_token != expected_token:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail=("Forbidden: missing or invalid adapter auth token. " f"Please check auth token header '{header_name}'."),
+            detail=(f"Forbidden: missing or invalid adapter auth token. Please check auth token header '{header_name}'."),
         )
 
 

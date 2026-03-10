@@ -4,7 +4,6 @@ from types import SimpleNamespace
 
 import pytest
 from fastapi import HTTPException
-from fastapi.responses import JSONResponse
 from fastmcp.exceptions import ToolError
 
 from remote_mcp_adapter.app import route_registration as rr
@@ -464,7 +463,11 @@ async def test_artifact_download_route_branches(monkeypatch):
     monkeypatch.setattr(rr, "_record_artifact_download_metrics", record_metrics)
     monkeypatch.setattr(rr, "raise_unknown_server_if_missing", lambda **kwargs: None)
     monkeypatch.setattr(rr, "raise_fail_closed_if_rejecting", lambda **kwargs: None)
-    monkeypatch.setattr(rr, "resolve_artifact_for_read", lambda **kwargs: __import__("asyncio").sleep(0, result=_ArtifactRecord()))
+
+    async def resolve_ok(**kwargs):
+        return _ArtifactRecord()
+
+    monkeypatch.setattr(rr, "resolve_artifact_for_read", resolve_ok)
 
     rr._register_artifact_download_route(context=ctx)
     assert info_calls
