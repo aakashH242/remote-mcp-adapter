@@ -6,6 +6,7 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Docker](https://img.shields.io/badge/docker-ready-blue.svg)](Dockerfile)
 [![Coverage](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/aakashH242/remote-mcp-adapter/main/.github/badges/coverage-badge.json)](https://github.com/aakashH242/remote-mcp-adapter/actions/workflows/coverage-badge.yml)
+[![MCP Badge](https://lobehub.com/badge/mcp/aakashh242-remote-mcp-adapter)](https://lobehub.com/mcp/aakashh242-remote-mcp-adapter)
 
 ---
 
@@ -30,19 +31,28 @@ This adapter sits between your client and your upstream MCP servers. It stages u
 
 ---
 
+## What's New
+
+<details>
+<summary>**v0.1.2 (03-10-2026)**</summary>
+- Tools can now be hidden per server using either tool names or regex. Set under `servers[].disabled_tools`.
+</details>
+
+---
+
 ## Core concepts
 
 Three ideas cover most of what the adapter does.
 
 - **Sessions.** Every client connection is identified by `Mcp-Session-Id`. The adapter scopes uploads, artifacts, and quotas to that session. This header is managed by the MCP client library automatically.
 
-- **Upload handles.** When a tool needs a file, the agent calls `<server_id>_get_upload_url(...)`, POSTs the file, and receives an `upload://sessions/<sid>/<upload_id>` handle. It passes that handle as the tool argument. The adapter resolves it to a real filesystem path before forwarding the call upstream.
+- **Upload handles.** When a tool needs a file, the agent calls `<server_id>_get_upload_url(...)`, POSTs the file, and receives an `upload://sessions/<sid>/<upload_id>` handle. It passes that handle as the tool argument. The adapter resolves it to a real filesystem path before forwarding the call upstream. The adapter exposes a MCP resource to serve as a guide for executing the staged upload flow. 
 
 - **Artifact references.** When a tool configured as an artifact producer creates a file, the adapter captures it and returns an `artifact://sessions/<sid>/<artifact_id>/<filename>` URI in the tool result. The agent calls `resources/read` on that URI to get the file bytes back.
 
 ---
 
-## Getting started
+## Quick Start
 
 ### Docker Compose (recommended)
 
@@ -145,6 +155,25 @@ servers:
 ```
 
 `servers[]` is the only required section. Everything else has safe defaults. The full [`config.yaml.template`](config.yaml.template) documents every field inline.
+
+---
+
+## Deployment Notes
+
+⚠️ When adapters are enabled, it is important that the adapter and the upstream servers share a common directory - 
+either via local filesystem or network storage. 
+
+Use the docker image to run host it in your environment. A helm chart is coming soon.
+Create your configuration using the [config reference](config.yaml.template), ensure your upstream servers are running, then pull
+and run the image.
+
+
+```
+docker pull ghcr.io/aakashh242/remote-mcp-adapter:latest
+
+docker run -d -v ./shared:/<your-path> -v ./config.yaml:/etc/config.yaml -p 8932:8932 ghcr.io/aakashh242/remote-mcp-adapter:latest
+
+```
 
 ---
 

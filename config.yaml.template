@@ -994,6 +994,29 @@ servers:
       allow_raw_output: null
 
     # -------------------------------------------------------------------------
+    # disabled_tools -- tool-level suppression list
+    # -------------------------------------------------------------------------
+    # A list of tool names or Python regex patterns (re.fullmatch) to exclude
+    # from this server's MCP proxy.  Matched tools are never registered and
+    # never appear in list_tools responses returned to clients.
+    #
+    # Each entry is first compared as a plain exact string; if that does not
+    # match, it is compiled and applied as a regex.  Invalid regex patterns are
+    # skipped with a warning log and do not prevent the adapter from starting.
+    #
+    # Use cases:
+    #   - Remove internal/debug tools exposed by an upstream server.
+    #   - Restrict a sensitive tool in a shared multi-tenant deployment.
+    #   - Suppress the auto-injected upload helper (e.g. "playwright_get_upload_url").
+    #
+    # Optional.  Default: [].
+    disabled_tools: []
+    # disabled_tools:
+    #   - "dangerous_exec_tool"        # exact name
+    #   - "^internal_.*"              # suppress any tool starting with "internal_"
+    #   - "playwright_get_upload_url" # suppress the auto-injected upload helper
+
+    # -------------------------------------------------------------------------
     # upstream_ping -- per-server overrides for the health/circuit-breaker loop
     # -------------------------------------------------------------------------
     # Any field set to null (or omitted) falls back to core.upstream_ping.

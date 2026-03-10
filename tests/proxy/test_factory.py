@@ -43,6 +43,7 @@ class _CaptureCtor:
 def _server(*, server_id="srv", transport="sse", insecure_tls=False, required=None, passthrough=None, static_headers=None):
     return SimpleNamespace(
         id=server_id,
+        disabled_tools=[],
         upstream=SimpleNamespace(
             static_headers=static_headers or {"X-Static": "1"},
             client_headers=SimpleNamespace(required=required or [], passthrough=passthrough or []),
