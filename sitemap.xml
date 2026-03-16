@@ -2,146 +2,166 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
          <loc>https://aakashh242.github.io/remote-mcp-adapter/</loc>
-         <lastmod>2026-03-10</lastmod>
+         <lastmod>2026-03-16</lastmod>
     </url>
     <url>
          <loc>https://aakashh242.github.io/remote-mcp-adapter/configuration/</loc>
-         <lastmod>2026-03-10</lastmod>
+         <lastmod>2026-03-16</lastmod>
     </url>
     <url>
          <loc>https://aakashh242.github.io/remote-mcp-adapter/core-concepts/</loc>
-         <lastmod>2026-03-10</lastmod>
+         <lastmod>2026-03-16</lastmod>
     </url>
     <url>
          <loc>https://aakashh242.github.io/remote-mcp-adapter/deployment/</loc>
-         <lastmod>2026-03-10</lastmod>
+         <lastmod>2026-03-16</lastmod>
     </url>
     <url>
          <loc>https://aakashh242.github.io/remote-mcp-adapter/getting-started/</loc>
-         <lastmod>2026-03-10</lastmod>
+         <lastmod>2026-03-16</lastmod>
     </url>
     <url>
          <loc>https://aakashh242.github.io/remote-mcp-adapter/health/</loc>
-         <lastmod>2026-03-10</lastmod>
+         <lastmod>2026-03-16</lastmod>
     </url>
     <url>
          <loc>https://aakashh242.github.io/remote-mcp-adapter/how-it-works/</loc>
-         <lastmod>2026-03-10</lastmod>
-    </url>
-    <url>
-         <loc>https://aakashh242.github.io/remote-mcp-adapter/security/</loc>
-         <lastmod>2026-03-10</lastmod>
+         <lastmod>2026-03-16</lastmod>
     </url>
     <url>
          <loc>https://aakashh242.github.io/remote-mcp-adapter/telemetry/</loc>
-         <lastmod>2026-03-10</lastmod>
+         <lastmod>2026-03-16</lastmod>
     </url>
     <url>
          <loc>https://aakashh242.github.io/remote-mcp-adapter/troubleshooting/</loc>
-         <lastmod>2026-03-10</lastmod>
+         <lastmod>2026-03-16</lastmod>
     </url>
     <url>
          <loc>https://aakashh242.github.io/remote-mcp-adapter/api/</loc>
-         <lastmod>2026-03-10</lastmod>
+         <lastmod>2026-03-16</lastmod>
     </url>
     <url>
          <loc>https://aakashh242.github.io/remote-mcp-adapter/api/internal/</loc>
-         <lastmod>2026-03-10</lastmod>
+         <lastmod>2026-03-16</lastmod>
     </url>
     <url>
          <loc>https://aakashh242.github.io/remote-mcp-adapter/api/public/</loc>
-         <lastmod>2026-03-10</lastmod>
+         <lastmod>2026-03-16</lastmod>
     </url>
     <url>
          <loc>https://aakashh242.github.io/remote-mcp-adapter/configuration/agent-optimized-code-mode/</loc>
-         <lastmod>2026-03-10</lastmod>
+         <lastmod>2026-03-16</lastmod>
     </url>
     <url>
          <loc>https://aakashh242.github.io/remote-mcp-adapter/configuration/config-reference/</loc>
-         <lastmod>2026-03-10</lastmod>
+         <lastmod>2026-03-16</lastmod>
     </url>
     <url>
          <loc>https://aakashh242.github.io/remote-mcp-adapter/configuration/distributed-production/</loc>
-         <lastmod>2026-03-10</lastmod>
+         <lastmod>2026-03-16</lastmod>
     </url>
     <url>
          <loc>https://aakashh242.github.io/remote-mcp-adapter/configuration/high-observability/</loc>
-         <lastmod>2026-03-10</lastmod>
+         <lastmod>2026-03-16</lastmod>
     </url>
     <url>
          <loc>https://aakashh242.github.io/remote-mcp-adapter/configuration/high-security/</loc>
-         <lastmod>2026-03-10</lastmod>
+         <lastmod>2026-03-16</lastmod>
     </url>
     <url>
          <loc>https://aakashh242.github.io/remote-mcp-adapter/configuration/local-dev/</loc>
-         <lastmod>2026-03-10</lastmod>
+         <lastmod>2026-03-16</lastmod>
     </url>
     <url>
          <loc>https://aakashh242.github.io/remote-mcp-adapter/configuration/passthrough-only-gateway/</loc>
-         <lastmod>2026-03-10</lastmod>
+         <lastmod>2026-03-16</lastmod>
     </url>
     <url>
          <loc>https://aakashh242.github.io/remote-mcp-adapter/configuration/private-demo-links/</loc>
-         <lastmod>2026-03-10</lastmod>
+         <lastmod>2026-03-16</lastmod>
     </url>
     <url>
          <loc>https://aakashh242.github.io/remote-mcp-adapter/configuration/public-demo-downloads/</loc>
-         <lastmod>2026-03-10</lastmod>
+         <lastmod>2026-03-16</lastmod>
     </url>
     <url>
          <loc>https://aakashh242.github.io/remote-mcp-adapter/configuration/restricted-limits/</loc>
-         <lastmod>2026-03-10</lastmod>
+         <lastmod>2026-03-16</lastmod>
     </url>
     <url>
          <loc>https://aakashh242.github.io/remote-mcp-adapter/configuration/single-node-durable/</loc>
-         <lastmod>2026-03-10</lastmod>
+         <lastmod>2026-03-16</lastmod>
     </url>
     <url>
          <loc>https://aakashh242.github.io/remote-mcp-adapter/deployment/compose/</loc>
-         <lastmod>2026-03-10</lastmod>
+         <lastmod>2026-03-16</lastmod>
     </url>
     <url>
          <loc>https://aakashh242.github.io/remote-mcp-adapter/deployment/helm/</loc>
-         <lastmod>2026-03-10</lastmod>
+         <lastmod>2026-03-16</lastmod>
     </url>
     <url>
          <loc>https://aakashh242.github.io/remote-mcp-adapter/deployment/helm/browser-facing-ingress/</loc>
-         <lastmod>2026-03-10</lastmod>
+         <lastmod>2026-03-16</lastmod>
     </url>
     <url>
          <loc>https://aakashh242.github.io/remote-mcp-adapter/deployment/helm/choose-a-shape/</loc>
-         <lastmod>2026-03-10</lastmod>
+         <lastmod>2026-03-16</lastmod>
     </url>
     <url>
          <loc>https://aakashh242.github.io/remote-mcp-adapter/deployment/helm/distributed-shared-platform/</loc>
-         <lastmod>2026-03-10</lastmod>
+         <lastmod>2026-03-16</lastmod>
     </url>
     <url>
          <loc>https://aakashh242.github.io/remote-mcp-adapter/deployment/helm/example-values-files/</loc>
-         <lastmod>2026-03-10</lastmod>
+         <lastmod>2026-03-16</lastmod>
     </url>
     <url>
          <loc>https://aakashh242.github.io/remote-mcp-adapter/deployment/helm/ha-adapter-tier/</loc>
-         <lastmod>2026-03-10</lastmod>
+         <lastmod>2026-03-16</lastmod>
     </url>
     <url>
          <loc>https://aakashh242.github.io/remote-mcp-adapter/deployment/helm/layered-values-file-pairs/</loc>
-         <lastmod>2026-03-10</lastmod>
+         <lastmod>2026-03-16</lastmod>
     </url>
     <url>
          <loc>https://aakashh242.github.io/remote-mcp-adapter/deployment/helm/observability-first-production/</loc>
-         <lastmod>2026-03-10</lastmod>
+         <lastmod>2026-03-16</lastmod>
     </url>
     <url>
          <loc>https://aakashh242.github.io/remote-mcp-adapter/deployment/helm/post-install-verification/</loc>
-         <lastmod>2026-03-10</lastmod>
+         <lastmod>2026-03-16</lastmod>
     </url>
     <url>
          <loc>https://aakashh242.github.io/remote-mcp-adapter/deployment/helm/standalone-durable/</loc>
-         <lastmod>2026-03-10</lastmod>
+         <lastmod>2026-03-16</lastmod>
     </url>
     <url>
          <loc>https://aakashh242.github.io/remote-mcp-adapter/deployment/helm/standalone-quickstart/</loc>
-         <lastmod>2026-03-10</lastmod>
+         <lastmod>2026-03-16</lastmod>
+    </url>
+    <url>
+         <loc>https://aakashh242.github.io/remote-mcp-adapter/security/</loc>
+         <lastmod>2026-03-16</lastmod>
+    </url>
+    <url>
+         <loc>https://aakashh242.github.io/remote-mcp-adapter/security/auth-and-session-boundaries/</loc>
+         <lastmod>2026-03-16</lastmod>
+    </url>
+    <url>
+         <loc>https://aakashh242.github.io/remote-mcp-adapter/security/current-defenses/</loc>
+         <lastmod>2026-03-16</lastmod>
+    </url>
+    <url>
+         <loc>https://aakashh242.github.io/remote-mcp-adapter/security/threat-model/</loc>
+         <lastmod>2026-03-16</lastmod>
+    </url>
+    <url>
+         <loc>https://aakashh242.github.io/remote-mcp-adapter/security/tool-definition-pinning/</loc>
+         <lastmod>2026-03-16</lastmod>
+    </url>
+    <url>
+         <loc>https://aakashh242.github.io/remote-mcp-adapter/security/tool-metadata-controls/</loc>
+         <lastmod>2026-03-16</lastmod>
     </url>
 </urlset>
