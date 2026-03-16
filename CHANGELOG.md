@@ -1,5 +1,19 @@
 # Changelog
 
+## v0.3.0 - 2026-03-16
+
+**Release:** v0.3.0
+
+- Tag: [`v0.3.0`](https://github.com/aakashH242/remote-mcp-adapter/releases/tag/v0.3.0)
+
+## What's Changed
+
+* feat: add security hardening by @aakashH242 in https://github.com/aakashH242/remote-mcp-adapter/pull/30
+* chore: update coverage badge by @github-actions[bot] in https://github.com/aakashH242/remote-mcp-adapter/pull/31
+
+**Full Changelog**: https://github.com/aakashH242/remote-mcp-adapter/compare/v0.2.0...v0.3.0
+
+
 ## v0.2.0 - 2026-03-10
 
 **Release:** v0.2.0
