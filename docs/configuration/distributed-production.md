@@ -1,6 +1,6 @@
 # Distributed Production Scenario
 
-**What you'll learn here:** how to configure the adapter for a real multi-replica deployment, which settings become mandatory once state is shared across nodes, and which operational knobs matter most for correctness and survivability.
+Multi-replica deployment with Redis-backed shared state, networked storage, and the operational discipline to match.
 
 ---
 
@@ -53,12 +53,7 @@ core:
   code_mode_enabled: false
 ```
 
-Why:
-
-- `public_base_url` is no longer optional in practice once URLs need to resolve through a load balancer or ingress.
-- `allow_artifacts_download: true` is now much more useful because externally routable URLs can be generated correctly.
-- `upstream_metadata_cache_ttl_seconds: 60` is a safer production value when upstreams may be redeployed and replicas should converge faster on updated tool metadata.
-- `code_mode_enabled: false` remains a baseline choice unless you specifically want that smaller interface.
+`public_base_url` is no longer optional in practice once URLs need to resolve through a load balancer or ingress. `allow_artifacts_download: true` is now much more useful because externally routable URLs can be generated correctly. `upstream_metadata_cache_ttl_seconds: 60` is a safer production value when upstreams may be redeployed and replicas should converge faster on updated tool metadata. `code_mode_enabled: false` remains a baseline choice unless you specifically want that smaller interface.
 
 If this deployment exposes `<server_id>_get_upload_url(...)`, assume `public_base_url` is mandatory. Without it, one replica may hand back a URL that only makes sense inside the cluster or container network.
 
@@ -74,11 +69,7 @@ core:
     signed_upload_ttl_seconds: 300
 ```
 
-Why:
-
-- distributed production should assume a real security boundary
-- use a dedicated `signing_secret` rather than coupling everything to the main auth token
-- signed upload URLs should be long enough for normal user flows, but short enough to remain low-risk
+Distributed production should assume a real security boundary. Use a dedicated `signing_secret` rather than coupling everything to the main auth token. Signed upload URLs should be long enough for normal user flows, but short enough to remain low-risk.
 
 ### State persistence
 
@@ -94,12 +85,7 @@ state_persistence:
     key_base: "remote-mcp-adapter"
 ```
 
-Why:
-
-- `redis` is the correct state backend when sessions must survive across replicas
-- each replica needs access to the same session metadata store
-- `fail_closed` is the safest default when shared state is unavailable
-- a `key_base` helps isolate adapter data from other workloads sharing the same Redis instance
+`redis` is the correct state backend when sessions must survive across replicas — each replica needs access to the same session metadata store. `fail_closed` is the safest default when shared state is unavailable. A `key_base` helps isolate adapter data from other workloads sharing the same Redis instance.
 
 If your platform prefers crash-and-restart behavior instead of serving failures, `unavailable_policy: "exit"` can also be a valid production choice.
 
@@ -114,12 +100,7 @@ storage:
   orphan_sweeper_grace_seconds: 300
 ```
 
-Why:
-
-- `root` must point at genuinely shared storage across all replicas
-- `lock_mode: "redis"` makes distributed file coordination explicit
-- storage limits should reflect real production capacity, not just local experimentation
-- cleanup should remain enabled because stale uploads and artifacts become more expensive in shared environments
+`root` must point at genuinely shared storage across all replicas. `lock_mode: "redis"` makes distributed file coordination explicit. Storage limits should reflect real production capacity, not just local experimentation. Cleanup should remain enabled because stale uploads and artifacts become more expensive in shared environments.
 
 If you prefer the adapter to infer this from `state_persistence.type: "redis"`, `lock_mode: "auto"` is also reasonable. The point is that distributed locking behavior must exist.
 
@@ -146,12 +127,7 @@ artifacts:
   expose_as_resources: true
 ```
 
-Why:
-
-- distributed production should have explicit quotas
-- `allow_revival: true` is part of what makes multi-replica behavior feel transparent to clients
-- `require_sha256: true` is a sensible integrity default once uploads cross real networks and infrastructure layers
-- the exact numbers should be adjusted for your workload, but the important thing is that they exist
+Distributed production should have explicit quotas. `allow_revival: true` is part of what makes multi-replica behavior feel transparent to clients — a reconnecting client recovers its session regardless of which replica it hits. `require_sha256: true` is a sensible integrity default once uploads cross real networks and infrastructure layers. The exact numbers should be adjusted for your workload, but the important thing is that they exist.
 
 ### Telemetry
 
@@ -162,11 +138,7 @@ telemetry:
   endpoint: "https://otel-collector.internal/v1/metrics"
 ```
 
-Why:
-
-- once the deployment is distributed, operators need visibility
-- telemetry stops being “nice to have” and starts becoming part of incident response and capacity planning
-- this page keeps the example minimal, but real deployments often add resource attributes, headers, and queue tuning too
+Once the deployment is distributed, operators need visibility. Telemetry stops being "nice to have" and starts becoming part of incident response and capacity planning. This page keeps the example minimal, but real deployments often add resource attributes, headers, and queue tuning too.
 
 ### Servers
 
@@ -192,11 +164,7 @@ servers:
           mode: "regex"
 ```
 
-Why:
-
-- the adapter tier can be distributed, but the upstream tier must still preserve session correctness
-- for stateful upstreams, a single upstream replica per server is often the simplest reliable choice
-- if upstreams are also load-balanced, they need their own session-affinity strategy
+The adapter tier can be distributed, but the upstream tier must still preserve session correctness. For stateful upstreams, a single upstream replica per server is often the simplest reliable choice. If upstreams are also load-balanced, they need their own session-affinity strategy.
 
 ---
 
@@ -339,7 +307,7 @@ If you do not need any of that yet, the single-node durable profile is usually e
 
 - **Back to:** [Configuration](../configuration.md) — overview and scenario index.
 - **Previous scenario:** [Single-Node Durable Scenario](single-node-durable.md) — durable but not distributed.
-- **See also:** [Security](../security.md) — auth, signed uploads, and protected endpoints.
+- **See also:** [Security](../security/index.md) — auth, signed uploads, and protected endpoints.
 - **See also:** [Telemetry](../telemetry.md) — exporter setup and queue tuning.
 - **See also:** [Config Reference](config-reference.md) — exact behavior for Redis, locks, storage, and limits.
 - **Next scenario:** [High-Security Scenario](high-security.md) — tighten auth, storage boundaries, and exposure surfaces.

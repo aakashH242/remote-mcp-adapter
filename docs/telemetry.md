@@ -1,6 +1,6 @@
 # Telemetry
 
-**What you'll learn here:** what observability signals the adapter emits, how to enable them, and what to look for once your collector is receiving data.
+The adapter emits OpenTelemetry signals when you enable telemetry — here is what those signals are, how to turn them on, and what to actually look at once data is flowing.
 
 ---
 
@@ -121,7 +121,7 @@ The following table lists every metric name emitted by the adapter.
 
 ## Next steps
 
-- **Previous topic:** [Security](security.md) — auth, signed URLs, and protected endpoints.
+- **Previous topic:** [Security](security/index.md) — auth, signed URLs, and protected endpoints.
 - **Next:** [Deployment](deployment.md) — choose how you actually want to run the adapter.
 - **See also:** [Configuration](configuration.md) — add the telemetry block to your config.
 - **See also:** [Config Reference](configuration/config-reference.md) — all `telemetry.*` fields.

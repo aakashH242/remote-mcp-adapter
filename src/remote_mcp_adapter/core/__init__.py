@@ -14,6 +14,7 @@ from .repo.redis_state_repository import RedisStateRepository
 from .repo.sqlite_state_repository import SqliteStateRepository
 from .persistence.startup_reconciliation import StartupStateReconciler, run_startup_state_reconciliation
 from .repo.state_repository import InMemoryStateRepository, StateRepository
+from .storage.errors import SessionTrustContextMismatchError, TerminalSessionInvalidatedError
 from .storage.store import SessionStore
 
 __all__ = [
@@ -33,5 +34,7 @@ __all__ = [
     "SqliteStateRepository",
     "StartupStateReconciler",
     "StateRepository",
+    "SessionTrustContextMismatchError",
+    "TerminalSessionInvalidatedError",
     "run_startup_state_reconciliation",
 ]

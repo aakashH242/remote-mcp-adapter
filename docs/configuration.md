@@ -1,12 +1,10 @@
-# Sections
+# Configuration
 
-**What you'll learn here:** the different configuration sections, how to write a working `config.yaml` quickly, what the required fields are, and the most common configuration mistakes.
+`servers[]` is the only required section. Everything else has safe defaults and can be left out entirely when you are starting fresh.
 
 ---
 
 ## The only required section
-
-The only thing you must define is `servers[]`. Every other section (`core`, `storage`, `sessions`, `uploads`, `artifacts`, `state_persistence`, `telemetry`) has safe defaults and can be omitted entirely when you are just getting started.
 
 Each server entry requires three fields: `id`, `mount_path`, and `upstream.url`. The `id` is a short slug used in logging and storage paths. It is also used in helper tool names when upload helpers are active (`<id>_get_upload_url`). The `mount_path` is the HTTP path where the adapter will accept MCP requests for this server.
 
@@ -121,16 +119,56 @@ servers:
 
 ---
 
-## Tool discovery and description shaping
+## Tool discovery and metadata shaping
 
-Two optional config groups change how tool metadata is presented to agents.
+Four optional config groups change how tool metadata is presented to agents.
+
+The adapter now starts from a conservative default stance here:
+
+- tool metadata sanitization defaults to `sanitize`
+- tool-definition pinning defaults to `warn`
+
+That means a fresh config already cleans suspicious visible tool text and already tells the client when an upstream tool catalog drifts mid-session. Stricter deployments can still move those controls to `block`.
 
 - `core.code_mode_enabled` enables FastMCP Code Mode globally. You can override it per server with `servers[].code_mode_enabled`.
 - In Code Mode, the adapter exposes server-prefixed synthetic tools such as `<server_id>_search`, `<server_id>_get_schema`, `<server_id>_tags`, `<server_id>_list_tools`, and `<server_id>_execute`.
 - `core.shorten_descriptions` enables shorter upload-consumer tool descriptions globally. You can override it per server with `servers[].shorten_descriptions`.
 - `core.short_description_max_tokens` and `servers[].short_description_max_tokens` control the token budget for that shortened first-sentence summary.
+- `core.tool_description_policy` controls how much description prose from upstream tools is forwarded at all. You can override it per server with `servers[].tool_description_policy`.
+- In `truncate` mode, the adapter keeps only the first configured characters for tool and schema descriptions.
+- In `strip` mode, the adapter removes description text entirely while keeping the tool payload MCP-compatible.
+- `core.tool_metadata_sanitization` can clean tool titles, descriptions, `annotations.title`, and schema text before that metadata reaches the client. You can override it per server with `servers[].tool_metadata_sanitization`.
+- In `sanitize` mode, the adapter forwards the cleaned version and logs that it had to make a change.
+- In `block` mode, the adapter hides tools whose visible metadata would have needed cleanup.
+- `core.tool_definition_pinning` pins the client-visible tool catalog on first exposure for a given `Mcp-Session-Id`, then detects later description/schema drift. You can override it per server with `servers[].tool_definition_pinning`. In `block + error`, `block_error_session_action` decides whether the adapter leaves the old session alive or invalidates it immediately.
+- In `warn` mode, which is the default, the adapter keeps the current catalog visible but marks that the session has seen drift.
 
 Use these only when you need a smaller, cleaner tool surface for weaker models or coding agents. They do not change the underlying upload or artifact behavior.
+
+---
+
+## Security controls and guardrails
+
+If you are reading `config.yaml` from an operator point of view, these are the main groups that change the adapter's security posture.
+
+- `core.auth` controls route auth, signed upload URLs, and signed artifact download URLs.
+- `core.tool_description_policy` and `servers[].tool_description_policy` let you preserve, truncate, or strip upstream description prose before it reaches the client.
+- `core.tool_metadata_sanitization` and `servers[].tool_metadata_sanitization` clean or block suspicious model-visible tool text before it reaches the client.
+- `core.tool_definition_pinning` and `servers[].tool_definition_pinning` protect one adapter session from mid-session tool-definition drift.
+- `servers[].disabled_tools` removes tools from the exposed surface entirely for one server.
+- `uploads.require_sha256`, `uploads.max_file_bytes`, `artifacts.max_per_session`, `sessions.max_total_session_size`, and `storage.max_size` turn local-dev defaults into explicit intake and storage limits.
+- `state_persistence.unavailable_policy` decides whether the adapter fails closed or serves in a more permissive degraded mode when its state backend is unavailable.
+- `core.allow_artifacts_download` and `core.public_base_url` decide whether HTTP artifact links exist at all and which public address they use.
+- `core.code_mode_enabled` and `servers[].code_mode_enabled` can reduce the visible tool surface, but they should be treated as surface-shaping controls, not as a substitute for auth or tool-definition pinning.
+
+By default, the adapter takes a middle path:
+
+- clean suspicious visible tool text before forwarding it
+- warn on tool-definition drift instead of silently accepting it
+
+That gives new deployments a safer baseline without turning every legitimate upstream upgrade into an immediate hard failure.
+
+If you want the "why" behind those knobs rather than just the field names, read the [Security](security/index.md) section alongside this page.
 
 ---
 
@@ -212,7 +250,7 @@ artifacts:
 Running more than one adapter process introduces two requirements that do not exist in a single-node deployment: session state must be shared across replicas, and generated URLs must point to the load balancer rather than to the individual container. The table below covers every field that changes meaning or becomes required in an HA setup.
 
 | Field | Default | What it does in HA | Recommendation                                                                      |
-|---|---|---|-------------------------------------------------------------------------------------|
+|---|---|---|-------------------------------------------------------------------------------------| 
 | `state_persistence.type` | `"disk"` | With the default disk backend, each replica maintains its own SQLite file. A client that reconnects to a different replica sees a fresh session with no uploads or artifacts. | Set to `"redis"`.                                                                   |
 | `state_persistence.redis.host` | `None` | Required when `type` is `"redis"`. | Set to your Redis host.                                                             |
 | `state_persistence.unavailable_policy` | `"fail_closed"` | Controls what happens when Redis is unreachable. `fail_closed` returns errors to callers. `exit` terminates the process so the orchestrator can restart it — cleaner for Kubernetes. `fallback_memory` is dangerous in HA: each replica builds its own in-memory state and session routing silently breaks. | Keep `"fail_closed"` or switch to `"exit"`. Never use `"fallback_memory"` in HA.    |
@@ -288,5 +326,5 @@ state_persistence:
 ## Next steps
 
 - **Next:** [Detailed Reference](configuration/config-reference.md) — every field, default, and constraint.
-- **See also:** [Security](security.md) — enable bearer token auth.
+- **See also:** [Security](security/index.md) — enable bearer token auth.
 - **See also:** [Telemetry](telemetry.md) — enable OpenTelemetry metrics.

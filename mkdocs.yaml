@@ -73,10 +73,16 @@ nav:
           - Agent-optimized Code Mode: configuration/agent-optimized-code-mode.md
           - Public demo downloads: configuration/public-demo-downloads.md
           - Private demo links: configuration/private-demo-links.md
-  - Security: security.md
+  - Security:
+      - Overview: security/index.md
+      - Threat Model: security/threat-model.md
+      - Current Defenses: security/current-defenses.md
+      - Auth and Session Boundaries: security/auth-and-session-boundaries.md
+      - Tool Metadata Controls: security/tool-metadata-controls.md
+      - Tool Definition Pinning: security/tool-definition-pinning.md
   - Telemetry: telemetry.md
   - Deployment:
-      - Available Options: deployment.md
+      - Deployment: deployment.md
       - Deploy with Docker Compose: deployment/compose.md
       - Deploy with Helm:
           - Overview: deployment/helm.md

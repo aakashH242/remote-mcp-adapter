@@ -1,4 +1,5 @@
 core:
+  code_mode_enabled: true
   log_level: "info"
   allow_artifacts_download: true
   upstream_metadata_cache_ttl_seconds: 60

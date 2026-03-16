@@ -1,6 +1,6 @@
 # Restricted-Limits Scenario
 
-**What you'll learn here:** how to configure the adapter for tighter resource control, which limits matter most for shared environments, and how to reduce the chance that one client or workflow consumes disproportionate storage, session capacity, or upload bandwidth.
+A capacity-focused overlay for shared environments. Not about topology or security — about making sure one heavy workflow can't quietly degrade everyone else's experience.
 
 ---
 
@@ -50,13 +50,7 @@ storage:
   max_size: "5Gi"
 ```
 
-Why:
-
-- this creates a real upper bound on total stored file content
-- without a global storage cap, the adapter can keep writing until the underlying volume fails
-- in shared environments, total storage should always be intentional
-
-The exact value depends on how many users and artifacts you expect, but the important part is that it is finite.
+This creates a real upper bound on total stored file content. Without a global storage cap, the adapter can keep writing until the underlying volume fails. In shared environments, total storage should always be intentional. The exact value depends on how many users and artifacts you expect, but the important part is that it is finite.
 
 ### Sessions
 
@@ -69,13 +63,7 @@ sessions:
   tombstone_ttl_seconds: 3600
 ```
 
-Why:
-
-- `max_active` prevents unbounded session sprawl
-- `idle_ttl_seconds` shortens the lifetime of abandoned sessions
-- `max_total_session_size` limits how much one session can consume in aggregate
-- `max_in_flight_per_session` stops a single session from flooding the adapter with too many simultaneous operations
-- a shorter `tombstone_ttl_seconds` reduces the retention of dead-session metadata
+`max_active` prevents unbounded session sprawl. `idle_ttl_seconds` shortens the lifetime of abandoned sessions. `max_total_session_size` limits how much one session can consume in aggregate. `max_in_flight_per_session` stops a single session from flooding the adapter with too many simultaneous operations. A shorter `tombstone_ttl_seconds` reduces the retention of dead-session metadata.
 
 These values make the system stricter and sometimes less forgiving, but that is the point of the profile.
 
@@ -89,11 +77,7 @@ uploads:
   require_sha256: true
 ```
 
-Why:
-
-- smaller upload caps protect disk, memory, and network usage
-- shorter TTLs reduce how long staged content lingers if a tool call never follows
-- `require_sha256: true` is still a good baseline when clients are sending real files into a shared service
+Smaller upload caps protect disk, memory, and network usage. Shorter TTLs reduce how long staged content lingers if a tool call never follows. `require_sha256: true` is still a good baseline when clients are sending real files into a shared service.
 
 If users regularly need larger uploads, raise the cap deliberately rather than leaving it effectively open-ended.
 
@@ -107,12 +91,7 @@ artifacts:
   expose_as_resources: true
 ```
 
-Why:
-
-- artifact generation can be surprisingly expensive in real workflows
-- tighter `max_per_session` values prevent endless file creation loops
-- shorter artifact TTLs keep the shared storage pool cleaner
-- `expose_as_resources: true` keeps normal MCP behavior intact even while limits are stricter
+Artifact generation can be surprisingly expensive in real workflows. Tighter `max_per_session` values prevent endless file creation loops. Shorter artifact TTLs keep the shared storage pool cleaner. `expose_as_resources: true` keeps normal MCP behavior intact even while limits are stricter.
 
 ### Core and auth
 
@@ -124,10 +103,7 @@ core:
     enabled: true
 ```
 
-Why:
-
-- restricted limits are most useful in shared environments, and shared environments usually should not be anonymous
-- disabling artifact HTTP downloads is one way to reduce the number of external access paths if MCP resources alone are enough for your clients
+Restricted limits are most useful in shared environments, and shared environments usually should not be anonymous. Disabling artifact HTTP downloads is one way to reduce the number of external access paths if MCP resources alone are enough for your clients.
 
 ### State persistence and topology
 
@@ -230,5 +206,5 @@ If the main concern is exposure risk rather than capacity control, the high-secu
 - **Back to:** [Configuration](../configuration.md) — overview and scenario index.
 - **Previous scenario:** [High-Security Scenario](high-security.md) — security-focused hardening.
 - **See also:** [Config Reference](config-reference.md) — exact fields for sessions, uploads, artifacts, and storage limits.
-- **See also:** [Security](../security.md) — auth still matters even in limit-focused deployments.
+- **See also:** [Security](../security/index.md) — auth still matters even in limit-focused deployments.
 - **Next scenario:** [High-Observability Scenario](high-observability.md) — improve telemetry, runtime visibility, and production debugging.

@@ -1,6 +1,6 @@
 # Health & Diagnostics
 
-**What you'll learn here:** how to read `/healthz`, what `200` vs `503` means, and how to interpret degraded states.
+The `/healthz` endpoint tells you what the adapter thinks of itself and its upstreams. Here is how to read it.
 
 ---
 
@@ -50,7 +50,7 @@ Common values:
   - `fallback_memory_activated_during_<phase>`
   - `persistence_unavailable_via_<component>`
 
-So `degraded_reason` is not limited to only three fixed strings.
+`degraded_reason` is not limited to a fixed set of strings — persistence failure reasons in particular can be fairly specific about which phase failed.
 
 ---
 
@@ -119,7 +119,7 @@ livenessProbe:
 
 ## Next steps
 
-- **Previous topic:** [Post-Install Verification](deployment/helm/post-install-verification.md) - confirm the Helm deployment is actually healthy before reading deeper diagnostics.
-- **Next:** [Troubleshooting](troubleshooting.md) - common failures and fixes.
-- **See also:** [Configuration](configuration.md) - upstream ping and startup settings.
-- **See also:** [Security](security.md) - public vs protected routes.
+- **Previous topic:** [Post-Install Verification](deployment/helm/post-install-verification.md) — confirm a Helm deployment is actually healthy before reading deeper diagnostics.
+- **Next:** [Troubleshooting](troubleshooting.md) — common failures and fixes.
+- **See also:** [Configuration](configuration.md) — upstream ping and startup settings.
+- **See also:** [Security](security/index.md) — public vs protected routes.

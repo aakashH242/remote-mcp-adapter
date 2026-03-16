@@ -71,6 +71,7 @@ class AdapterTelemetry:
         self._cleanup_cycles_total = None
         self._cleanup_removed_records_total = None
         self._sessions_lifecycle_total = None
+        self._tool_definition_drift_total = None
 
     @classmethod
     def from_config(cls, resolved_config: AdapterConfig) -> "AdapterTelemetry":
@@ -542,6 +543,32 @@ class AdapterTelemetry:
             {
                 "event": event,
                 "server_id": server_id,
+            },
+        )
+
+    async def record_tool_definition_drift(
+        self,
+        *,
+        server_id: str,
+        mode: str,
+        block_strategy: str,
+        outcome: str,
+    ) -> None:
+        """Record one tool-definition drift event.
+
+        Args:
+            server_id: Server identifier.
+            mode: Enforcement mode in effect (warn or block).
+            block_strategy: Effective block strategy.
+            outcome: Result label emitted by the adapter.
+        """
+        await self._enqueue(
+            "tool_definition_drift",
+            {
+                "server_id": (server_id or GLOBAL_SERVER_ID),
+                "mode": mode,
+                "block_strategy": block_strategy,
+                "outcome": outcome,
             },
         )
 

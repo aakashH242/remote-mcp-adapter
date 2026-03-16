@@ -8,9 +8,13 @@ from remote_mcp_adapter.core.repo.records import (
     ArtifactRecord,
     SessionState,
     SessionTombstone,
+    ToolDefinitionBaseline,
+    ToolDefinitionDriftSummary,
+    ToolDefinitionSnapshot,
     UploadRecord,
 )
 from remote_mcp_adapter.core.repo.sqlite_state_repository import SqliteStateRepository
+from remote_mcp_adapter.session_integrity.models import SessionTrustContext
 
 
 def _upload(upload_id: str, base: Path) -> UploadRecord:
@@ -53,6 +57,27 @@ def _state(base: Path) -> SessionState:
     state = SessionState(server_id="s1", session_id="sess", created_at=1.0, last_accessed=1.0, in_flight=1)
     state.uploads["u1"] = _upload("u1", base)
     state.artifacts["a1"] = _artifact("a1", base)
+    state.trust_context = SessionTrustContext(
+        binding_kind="adapter_auth_token",
+        fingerprint="f" * 64,
+    )
+    state.tool_definition_baseline = ToolDefinitionBaseline(
+        established_at=3.0,
+        tools={
+            "tool_a": ToolDefinitionSnapshot(
+                name="tool_a",
+                canonical_hash="hash-a",
+                payload={"name": "tool_a"},
+            )
+        },
+    )
+    state.tool_definition_drift_summary = ToolDefinitionDriftSummary(
+        detected_at=4.0,
+        mode="block",
+        block_strategy="baseline_subset",
+        changed_tools=["tool_a"],
+        preview="changed=tool_a[description]",
+    )
     return state
 
 
@@ -81,6 +106,12 @@ async def test_sqlite_state_repository_round_trip_and_cache_reload(tmp_path):
     assert loaded_state is not None
     assert loaded_tombstone is not None
     assert loaded_state.session_id == "sess"
+    assert loaded_state.trust_context is not None
+    assert loaded_state.trust_context.binding_kind == "adapter_auth_token"
+    assert loaded_state.tool_definition_baseline is not None
+    assert loaded_state.tool_definition_baseline.tools["tool_a"].canonical_hash == "hash-a"
+    assert loaded_state.tool_definition_drift_summary is not None
+    assert loaded_state.tool_definition_drift_summary.block_strategy == "baseline_subset"
     assert loaded_tombstone.expires_at == 999.0
 
     popped_state = await reloaded.pop_session(key)

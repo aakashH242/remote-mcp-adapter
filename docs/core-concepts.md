@@ -1,6 +1,6 @@
 # Core Concepts
 
-**What you'll learn here:** the core model behind sessions, upload handles, artifact URIs, and passthrough tools.
+Three things underpin everything the adapter does: sessions, upload handles, and artifact URIs. Once you have a mental model for these, the rest of the config and behavior makes a lot more sense.
 
 ---
 
@@ -24,7 +24,7 @@ Content-Type: application/json
 
 ### Why local paths fail remotely
 
-A path like `/Users/me/report.pdf` exists on the client machine, not on the upstream MCP server machine. Remote upstream tools cannot read it directly.
+A path like `/Users/me/report.pdf` exists on the client machine, not on the upstream MCP server machine. Remote upstream tools cannot read it directly, and there is no automatic magic that copies the file across.
 
 The fix is to stage the file first, then pass an `upload://` handle to the tool.
 
@@ -79,11 +79,11 @@ Clients can call `resources/read` on that URI to fetch bytes. If `core.allow_art
 
 ## Passthrough tools
 
-Any tool not listed in `upload_consumer` or `artifact_producer` config is passthrough. The adapter forwards arguments and returns results unchanged.
+Any tool not listed in `upload_consumer` or `artifact_producer` config is passthrough. The adapter forwards arguments and returns results unchanged. Most tools fall into this bucket.
 
 ---
 
 ## Next steps
 
-- **Next:** [How It Works](how-it-works.md) - internal request and wiring flow.
-- **See also:** [Configuration](configuration.md) - how to map tools to adapter types.
+- **Next:** [How It Works](how-it-works.md) — internal request and wiring flow, with a full sequence diagram.
+- **See also:** [Configuration](configuration.md) — how to map tools to adapter types.

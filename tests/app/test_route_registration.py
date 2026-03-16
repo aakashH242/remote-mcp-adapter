@@ -7,7 +7,7 @@ from fastapi import HTTPException
 from fastmcp.exceptions import ToolError
 
 from remote_mcp_adapter.app import route_registration as rr
-from remote_mcp_adapter.core import PersistenceUnavailableError
+from remote_mcp_adapter.core import PersistenceUnavailableError, TerminalSessionInvalidatedError
 from remote_mcp_adapter.core.storage.artifact_access import (
     ArtifactFileMissingError,
     ArtifactFilenameMismatchError,
@@ -150,6 +150,17 @@ async def test_raise_upload_http_exception_for_failure_branches(monkeypatch):
         )
     assert p_tool.value.status_code == 400
     assert failure_metrics[-1]["reason"] == "tool_error"
+
+    with pytest.raises(HTTPException) as p_terminal:
+        await rr._raise_upload_http_exception_for_failure(
+            error=TerminalSessionInvalidatedError("dead"),
+            records=[],
+            context=ctx,
+            server_id="s1",
+            session_id="sess",
+        )
+    assert p_terminal.value.status_code == 409
+    assert failure_metrics[-1]["reason"] == "session_invalidated"
 
     async def switched_true(**kwargs):
         return True

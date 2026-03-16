@@ -11,7 +11,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastmcp.exceptions import ToolError
 
 from ..constants import MCP_SESSION_ID_HEADER, UNKNOWN_SERVER_ID
-from ..core import PersistenceUnavailableError
+from ..core import PersistenceUnavailableError, TerminalSessionInvalidatedError
 from ..core.storage.artifact_access import (
     ArtifactFileMissingError,
     ArtifactFilenameMismatchError,
@@ -76,6 +76,13 @@ async def _raise_upload_http_exception_for_failure(
             reason="persistence_unavailable",
         )
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(error)) from error
+    if isinstance(error, TerminalSessionInvalidatedError):
+        await record_upload_failure_metrics(
+            telemetry=context.telemetry,
+            server_id=server_id,
+            reason="session_invalidated",
+        )
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(error)) from error
     if not isinstance(error, ToolError) and await apply_runtime_failure_policy_if_persistent_backend(
         resolved_config=context.resolved_config,
         persistence_policy=context.persistence_policy,

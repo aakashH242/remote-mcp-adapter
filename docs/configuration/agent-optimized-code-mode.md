@@ -1,6 +1,6 @@
 # Agent-Optimized Code Mode Scenario
 
-**What you'll learn here:** when Code Mode actually helps, when to use global versus per-server overrides, how description-shortening fits into the picture, and why this profile is especially useful for coding agents and smaller models that struggle with large tool catalogs.
+A compact discovery surface for coding agents and smaller models. Reduces tool-list overload while preserving upload and artifact behavior.
 
 ---
 
@@ -67,11 +67,7 @@ core:
   short_description_max_tokens: 16
 ```
 
-Why:
-
-- `code_mode_enabled: true` enables the compact agent-facing surface globally
-- `shorten_descriptions: true` keeps upload-consumer descriptions from becoming bloated
-- `short_description_max_tokens: 16` is a reasonable default for preserving just enough semantic signal
+`code_mode_enabled: true` enables the compact agent-facing surface globally. `shorten_descriptions: true` keeps upload-consumer descriptions from becoming bloated. `short_description_max_tokens: 16` is a reasonable default for preserving just enough semantic signal.
 
 This is the easiest option when most or all upstream servers benefit from the same agent-oriented presentation.
 
@@ -100,11 +96,7 @@ servers:
       url: "http://fetch.internal:8080/mcp"
 ```
 
-Why:
-
-- this is the safer choice in mixed environments
-- some upstreams have huge tool sets and some do not
-- it lets you keep human-friendlier direct tools for simpler servers while compressing only the noisy ones
+This is the safer choice in mixed environments. Some upstreams have huge tool sets and some do not. It lets you keep human-friendlier direct tools for simpler servers while compressing only the noisy ones.
 
 ### Description shaping
 
@@ -114,11 +106,7 @@ core:
   short_description_max_tokens: 16
 ```
 
-Why:
-
-- this only affects adapter-wrapped upload-consumer descriptions
-- it helps reduce prompt clutter for models that are easily distracted by long workflow instructions
-- it pairs naturally with Code Mode, but it can also be useful on its own
+This only affects adapter-wrapped upload-consumer descriptions. It helps reduce prompt clutter for models that are easily distracted by long workflow instructions. It pairs naturally with Code Mode, but it can also be useful on its own.
 
 Do not turn this on blindly for every environment. If humans or stronger models rely on detailed upstream descriptions, full descriptions may still be the better choice.
 

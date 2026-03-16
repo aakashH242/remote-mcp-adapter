@@ -6,7 +6,7 @@
 
 ## What this scenario is for
 
-This is the “one serious pod” shape.
+This is the "one serious pod" shape.
 
 Choose it when:
 
@@ -106,7 +106,11 @@ helm upgrade --install remote-mcp-adapter remote-mcp-adapter/remote-mcp-adapter 
 
 ## Next steps
 
-- **Back to:** [Deploy with Helm](../helm.md) — Helm overview and scenario selection.
-- **Previous scenario:** [Standalone Quick Start](standalone-quickstart.md) — simplest colocated setup.
-- **Next scenario:** [Distributed Shared Platform](distributed-shared-platform.md) — separate the adapter from upstream service lifecycle.
-- **See also:** [Security](../../security.md) — auth and signing behavior.
+- **Back to:** [Deploy with Helm](../helm.md) - Helm overview and scenario selection.
+- **Previous scenario:** [Standalone Quick Start](standalone-quickstart.md) - simplest colocated setup.
+- **Next scenario:** [Distributed Shared Platform](distributed-shared-platform.md) - separate the adapter from upstream service lifecycle.
+- **See also:** [Security](../../security/index.md) - auth and signing behavior.
+
+
+
+

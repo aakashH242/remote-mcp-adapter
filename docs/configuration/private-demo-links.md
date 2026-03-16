@@ -1,6 +1,6 @@
 # Private Demo Links Scenario
 
-**What you'll learn here:** how to configure the adapter for internal demos and stakeholder walkthroughs, why `public_base_url` still matters in private environments, and how to keep human-clickable upload and download links working cleanly without opening the service more broadly than necessary.
+For guided internal demos behind a VPN or proxy. Balances the need for secure MCP traffic with the reality of humans clicking links in Slack or Jira.
 
 ---
 
@@ -29,7 +29,7 @@ A private-demo deployment usually assumes:
 - the environment is access-controlled already, but not every person clicking a link is operating through an MCP client
 - you want a polished internal experience without treating the service like a public website
 
-This is a very common real-world setup: not public internet, but still not “developer only.”
+This is a very common real-world setup: not public internet, but still not "developer only."
 
 ---
 
@@ -44,11 +44,7 @@ core:
   log_level: "info"
 ```
 
-Why:
-
-- `public_base_url` is just as important internally as it is externally when humans click links
-- `allow_artifacts_download: true` lets returned artifact metadata include usable download links
-- `log_level: "info"` is a comfortable default for demos that may need quick troubleshooting
+`public_base_url` is just as important internally as it is externally when humans click links. `allow_artifacts_download: true` lets returned artifact metadata include usable download links. `log_level: "info"` is a comfortable default for demos that may need quick troubleshooting.
 
 The most common mistake in this kind of environment is assuming the adapter can always guess the right URL because the audience is internal. In practice, internal proxies and split DNS break that assumption all the time.
 
@@ -63,12 +59,7 @@ core:
     signing_secret: "${MCP_ADAPTER_SIGNING_SECRET}"
 ```
 
-Why:
-
-- you still want the adapter protected for ordinary requests
-- signed upload URLs make browser-assisted flows easier
-- signed download links make it practical for someone to click an artifact URL from a ticket or chat message
-- a slightly longer signed TTL is often reasonable here because internal demos can be slower and more conversational than public UI flows
+You still want the adapter protected for ordinary requests. Signed upload URLs make browser-assisted flows easier, and signed download links make it practical for someone to click an artifact URL from a ticket or chat message. A slightly longer signed TTL is often reasonable here because internal demos can be slower and more conversational than public UI flows.
 
 ### CORS
 
@@ -80,11 +71,7 @@ core:
     enabled: false
 ```
 
-Why:
-
-- if the human is only clicking returned links, CORS may be irrelevant
-- keeping it off by default is simpler and safer
-- you can still enable it later if you introduce a direct browser client
+If the human is only clicking returned links, CORS may be irrelevant. Keeping it off by default is simpler and safer, and you can still enable it later if you introduce a direct browser client.
 
 ### Sessions, uploads, and artifacts
 
@@ -107,11 +94,7 @@ artifacts:
   expose_as_resources: true
 ```
 
-Why:
-
-- private demos often involve fewer people than public showcases, so the limits can be a little less aggressive
-- a longer upload TTL is often useful when the demo includes human pauses, explanation, or back-and-forth
-- artifact links remain available long enough for stakeholders to open them without rushing
+Private demos often involve fewer people than public showcases, so the limits can be a little less aggressive. A longer upload TTL is often useful when the demo includes human pauses, explanation, or back-and-forth. Artifact links remain available long enough for stakeholders to open them without rushing.
 
 ### Topology
 
@@ -194,6 +177,6 @@ That combination is often exactly what internal reviews and stakeholder sessions
 
 - **Back to:** [Configuration](../configuration.md) — overview and scenario index.
 - **Previous scenario:** [Public Demo Downloads Scenario](public-demo-downloads.md) — broader browser-facing and externally shared demo flow.
-- **See also:** [Security](../security.md) — auth behavior and signed URL rules.
+- **See also:** [Security](../security/index.md) — auth behavior and signed URL rules.
 - **See also:** [Detailed Reference](config-reference.md) — exact fields for `public_base_url`, signed TTLs, and artifact download behavior.
-- **Next topic:** [Security](../security.md) — move from scenario patterns into route protection, auth headers, and signed credentials.
+- **Next topic:** [Security](../security/index.md) — move from scenario patterns into route protection, auth headers, and signed credentials.

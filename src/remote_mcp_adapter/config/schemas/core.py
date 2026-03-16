@@ -6,6 +6,9 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 
 from ...constants import DEFAULT_ADAPTER_AUTH_HEADER
 from .common import ToolDefaults, normalize_path
+from .tool_description_policy import ToolDescriptionPolicyConfig
+from .tool_metadata_sanitization import ToolMetadataSanitizationConfig
+from .tool_definition_pinning import ToolDefinitionPinningConfig
 
 
 class CoreAuthConfig(BaseModel):
@@ -89,6 +92,9 @@ class CoreConfig(BaseModel):
     code_mode_enabled: bool = False
     shorten_descriptions: bool = False
     short_description_max_tokens: int = Field(default=16, gt=0)
+    tool_description_policy: ToolDescriptionPolicyConfig = Field(default_factory=ToolDescriptionPolicyConfig)
+    tool_metadata_sanitization: ToolMetadataSanitizationConfig = Field(default_factory=ToolMetadataSanitizationConfig)
+    tool_definition_pinning: ToolDefinitionPinningConfig = Field(default_factory=ToolDefinitionPinningConfig)
     upload_path: str = "/upload"
     upstream_metadata_cache_ttl_seconds: int = Field(default=300, ge=0)
     upstream_ping: UpstreamPingConfig = Field(default_factory=UpstreamPingConfig)

@@ -9,7 +9,11 @@ from fastapi.responses import JSONResponse
 from fastmcp.exceptions import ToolError
 
 from remote_mcp_adapter.app import middleware_registration as mr
-from remote_mcp_adapter.core import PersistenceUnavailableError
+from remote_mcp_adapter.core import (
+    PersistenceUnavailableError,
+    SessionTrustContextMismatchError,
+    TerminalSessionInvalidatedError,
+)
 
 
 class _DummyApp:
@@ -62,8 +66,10 @@ class _SessionStore:
     def __init__(self):
         self.begin_calls = []
         self.end_calls = []
+        self.bind_calls = []
         self.begin_exc = None
         self.end_exc = None
+        self.bind_exc = None
 
     async def begin_in_flight(self, server_id, session_id):
         self.begin_calls.append((server_id, session_id))
@@ -74,6 +80,11 @@ class _SessionStore:
         self.end_calls.append((server_id, session_id))
         if self.end_exc:
             raise self.end_exc
+
+    async def bind_or_validate_session_trust_context(self, *, server_id, session_id, trust_context):
+        self.bind_calls.append((server_id, session_id, trust_context))
+        if self.bind_exc:
+            raise self.bind_exc
 
 
 class _CancellationObserver:
@@ -116,7 +127,7 @@ def _context():
     return SimpleNamespace(
         app=app,
         resolved_config=SimpleNamespace(
-            core=SimpleNamespace(auth=SimpleNamespace(enabled=True)),
+            core=SimpleNamespace(auth=SimpleNamespace(enabled=True, header_name="x-adapter-auth", token="secret")),
         ),
         persistence_policy=SimpleNamespace(should_reject_stateful_requests=lambda: False),
         runtime_ref={"current": object()},
@@ -362,20 +373,16 @@ async def test_in_flight_rejection_helpers(monkeypatch):
     ctx.upstream_health = {}
     assert await mr._reject_in_flight_for_breaker(context=ctx, request=req, matched_server_id=None) is None
     assert await mr._reject_in_flight_for_breaker(context=ctx, request=req, matched_server_id="s1") is None
-    ctx.upstream_health = {
-        "s1": SimpleNamespace(allow_proxy_request=lambda: _async_result((True, None)))
-    }
+    ctx.upstream_health = {"s1": SimpleNamespace(allow_proxy_request=lambda: _async_result((True, None)))}
     assert await mr._reject_in_flight_for_breaker(context=ctx, request=req, matched_server_id="s1") is None
-    ctx.upstream_health = {
-        "s1": SimpleNamespace(allow_proxy_request=lambda: _async_result((False, "blocked")))
-    }
+    ctx.upstream_health = {"s1": SimpleNamespace(allow_proxy_request=lambda: _async_result((False, "blocked")))}
     assert await mr._reject_in_flight_for_breaker(context=ctx, request=req, matched_server_id="s1") is marker
 
 
 @pytest.mark.asyncio
 async def test_begin_end_track_in_flight_and_process_auth(monkeypatch):
     ctx = _context()
-    req = _request(path="/mcp/s1/tools", headers={"mcp-session-id": "sess"})
+    req = _request(path="/mcp/s1/tools", headers={"mcp-session-id": "sess", "x-adapter-auth": "secret"})
 
     async def call_next(request):
         return JSONResponse(status_code=200, content={"ok": True})
@@ -389,6 +396,15 @@ async def test_begin_end_track_in_flight_and_process_auth(monkeypatch):
     ctx.session_store.begin_exc = ToolError("limit")
     response2 = await mr._begin_in_flight_or_reject(context=ctx, request=req, matched_server_id="s1", session_id="sess")
     assert isinstance(response2, JSONResponse) and response2.status_code == 429
+
+    ctx.session_store.begin_exc = TerminalSessionInvalidatedError("session dead")
+    response_terminal = await mr._begin_in_flight_or_reject(
+        context=ctx,
+        request=req,
+        matched_server_id="s1",
+        session_id="sess",
+    )
+    assert isinstance(response_terminal, JSONResponse) and response_terminal.status_code == 409
 
     ctx.session_store.begin_exc = RuntimeError("x")
     monkeypatch.setattr(
@@ -487,6 +503,26 @@ async def test_begin_end_track_in_flight_and_process_auth(monkeypatch):
     monkeypatch.setattr(mr, "validate_adapter_auth", lambda request, config: None)
     auth_ok = await mr._process_auth_request(context=ctx, request=req, call_next=call_next)
     assert auth_ok.status_code == 200
+    assert ctx.session_store.bind_calls
+
+
+@pytest.mark.asyncio
+async def test_process_auth_request_rejects_session_trust_context_mismatch(monkeypatch):
+    ctx = _context()
+    ctx.session_store.bind_exc = SessionTrustContextMismatchError("session mismatch")
+    req = _request(
+        path="/mcp/s1/tools",
+        headers={"mcp-session-id": "sess", "x-adapter-auth": "secret"},
+    )
+
+    async def call_next(request):
+        return JSONResponse(status_code=200, content={"ok": True})
+
+    monkeypatch.setattr(mr, "validate_adapter_auth", lambda request, config: None)
+
+    response = await mr._process_auth_request(context=ctx, request=req, call_next=call_next)
+
+    assert response.status_code == 409
 
 
 @pytest.mark.asyncio

@@ -1,6 +1,6 @@
 # How It Works
 
-**What you'll learn here:** how tool categories are wired from config, and what request/response flow looks like for uploads and artifacts.
+How tool categories are wired from config, and what the request/response flow looks like for uploads and artifacts.
 
 ---
 
@@ -42,7 +42,24 @@ See [Configuration](configuration.md) and [Config Reference](configuration/confi
 
 ---
 
+## Tool-definition pinning
+
+When `core.tool_definition_pinning` is enabled, the adapter also protects the session from tool-catalog drift.
+
+- On the first tool-catalog exposure for a given `Mcp-Session-Id`, the adapter pins the client-visible tool definitions for that session.
+- On later catalog reads, it compares the current definitions to that baseline.
+- If an upstream server changes a tool description, schema, or tool set mid-session, the adapter can either:
+  - warn, or
+  - block that changed surface according to policy
+- In `block + error`, the policy can also invalidate the current session immediately so the client must reconnect with a fresh `Mcp-Session-Id`.
+
+This is session-scoped by design. If an upstream server is legitimately upgraded and you want the client to accept the new tool catalog, start a fresh adapter session.
+
+---
+
 ## Request flow
+
+The diagram below covers all four cases in order: passthrough, upload staging, upload_consumer tool call, and artifact_producer tool call. Most calls are just passthrough (step 1). The interesting paths are 2 through 4.
 
 ```mermaid
 sequenceDiagram
@@ -111,6 +128,8 @@ sequenceDiagram
   end
 ```
 
+The `opt` blocks at the bottom of step 4 are additive — they only fire when you have enabled the corresponding config. If `allow_artifacts_download` is off, the download URL block never appears.
+
 ---
 
 ## Session mapping note
@@ -121,6 +140,6 @@ The adapter keeps an upstream session per client session. If upstream session te
 
 ## Next steps
 
-- **Next:** [Configuration](configuration.md) - move from concepts to actual config structure.
-- **See also:** [Core Concepts](core-concepts.md) - user-facing model.
-- **See also:** [Config Reference](configuration/config-reference.md) - complete field reference.
+- **Next:** [Configuration](configuration.md) — move from concepts to actual config structure.
+- **See also:** [Core Concepts](core-concepts.md) — the user-facing model if you want to back up one level.
+- **See also:** [Config Reference](configuration/config-reference.md) — complete field reference.

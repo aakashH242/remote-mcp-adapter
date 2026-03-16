@@ -63,7 +63,7 @@ def create_app(config: AdapterConfig | None = None, config_path: str | None = No
         lock_provider=persistence_runtime.lock_provider,
         telemetry=telemetry,
     )
-    proxy_map = build_proxy_map(resolved_config, session_store=session_store)
+    proxy_map = build_proxy_map(resolved_config, session_store=session_store, telemetry=telemetry)
     upload_nonce_store = build_upload_nonce_store(config=resolved_config, runtime=persistence_runtime)
     upload_credentials = UploadCredentialManager.from_config(
         resolved_config,

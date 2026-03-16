@@ -1,6 +1,6 @@
 # Local Dev Scenario
 
-**What you'll learn here:** which config knobs matter for local development, which values keep setup friction low, what tradeoffs you are making, and when to move on to a stricter profile.
+The starting profile for first-time setup, local iteration, and debugging the adapter's file-handling flows. Optimized for simplicity and fast feedback, not for security or production scale.
 
 ---
 
@@ -48,13 +48,7 @@ core:
   code_mode_enabled: false
 ```
 
-Why:
-
-- `host: "0.0.0.0"` works well in Docker and local containers.
-- `log_level: "info"` is easier to debug than the quieter production-style defaults.
-- `allow_artifacts_download: true` is convenient when you want to quickly inspect generated files.
-- `code_mode_enabled: false` keeps the full tool surface visible while you are learning and debugging.
-- you can usually leave `public_base_url` unset locally because the adapter can infer a usable address on localhost
+`host: "0.0.0.0"` works well in Docker and local containers. `log_level: "info"` is easier to debug than the quieter production-style defaults. `allow_artifacts_download: true` is convenient when you want to quickly inspect generated files. `code_mode_enabled: false` keeps the full tool surface visible while you are learning and debugging. You can usually leave `public_base_url` unset locally because the adapter can infer a usable address on localhost.
 
 If your local setup runs behind a tunnel, reverse proxy, or some other hostname that the client uses instead of `localhost`, set `core.public_base_url` anyway. That keeps upload helper URLs and download links honest.
 
@@ -66,11 +60,7 @@ core:
     enabled: false
 ```
 
-Why:
-
-- local development is usually trusted and short-lived
-- disabling auth removes client setup friction
-- you should not keep this setting for anything exposed beyond localhost or a private dev environment
+Local development is usually trusted and short-lived. Disabling auth removes client setup friction. You should not keep this setting for anything exposed beyond localhost or a private dev environment.
 
 ### State persistence
 
@@ -81,13 +71,7 @@ state_persistence:
   unavailable_policy: "fallback_memory"
 ```
 
-Why:
-
-- `memory` is the simplest option and avoids external dependencies
-- it is ideal when you do not care about durable sessions across restarts
-- the adapter starts fast and is easy to reset
-
-If you want sessions to survive restarts on your own machine, `disk` is also reasonable for local work, but `memory` is the cleanest default profile.
+`memory` is the simplest option and avoids external dependencies. It is ideal when you do not care about durable sessions across restarts — the adapter starts fast and is easy to reset. If you want sessions to survive restarts on your own machine, `disk` is also reasonable for local work, but `memory` is the cleanest default profile.
 
 ### Storage
 
@@ -98,11 +82,7 @@ storage:
   max_size: null
 ```
 
-Why:
-
-- use a path you can inspect and wipe easily
-- `process` locking is enough for a single process on one machine
-- `max_size: null` keeps the setup friction low while you experiment
+Use a path you can inspect and wipe easily. `process` locking is enough for a single process on one machine. `max_size: null` keeps the setup friction low while you experiment.
 
 If you use Docker or Compose, the path should match the mounted shared directory used by both the adapter and the upstream container.
 
@@ -128,13 +108,7 @@ artifacts:
   expose_as_resources: true
 ```
 
-Why:
-
-- keep uploads and artifacts enabled so you exercise the adapter's main value
-- use a real idle TTL so forgotten sessions do not pile up forever
-- use a slightly longer upload TTL than the smallest defaults so manual testing is less annoying
-- keep `require_sha256: false` for convenience while iterating locally
-- leave the stricter per-session caps unset unless you are deliberately testing quota behavior
+Keep uploads and artifacts enabled so you exercise the adapter's main value. Use a real idle TTL so forgotten sessions do not pile up forever. Use a slightly longer upload TTL than the smallest defaults so manual testing is less annoying. Keep `require_sha256: false` for convenience while iterating locally. Leave the stricter per-session caps unset unless you are deliberately testing quota behavior.
 
 ### Telemetry
 
@@ -143,11 +117,7 @@ telemetry:
   enabled: false
 ```
 
-Why:
-
-- unnecessary for most local work
-- fewer moving parts
-- less noise while debugging basic behavior
+Unnecessary for most local work — fewer moving parts and less noise while debugging basic behavior.
 
 ### Servers
 
@@ -173,11 +143,7 @@ servers:
           mode: "regex"
 ```
 
-Why:
-
-- this exercises both the upload path and the artifact path
-- it is the fastest way to confirm the adapter is doing real work instead of only passing requests through
-- it matches the most common first-run setup in this repository
+This exercises both the upload path and the artifact path. It is the fastest way to confirm the adapter is doing real work instead of only passing requests through, and it matches the most common first-run setup in this repository.
 
 ---
 

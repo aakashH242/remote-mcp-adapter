@@ -569,6 +569,7 @@ async def wire_adapters(
             wire_state.providers_added.add(server.id)
 
         if not upload_consumers and not artifact_producers and not server.disabled_tools:
+            mount.wiring_readiness.set_ready(True)
             server_status[server.id] = True
             continue
 
@@ -581,6 +582,7 @@ async def wire_adapters(
                 server.mount_path,
                 extra={"server_id": server.id, "mount_path": server.mount_path, "error": str(exc)},
             )
+            mount.wiring_readiness.set_ready(False)
             server_status[server.id] = False
             continue
 
@@ -665,6 +667,7 @@ async def wire_adapters(
                 mount.proxy.add_tool(OverrideTool.from_mcp_tool(upstream_tool, handler=handler))
                 hide_upstream_tool_names(proxy=mount.proxy, tool_names={tool_name})
                 registered_tools.add(tool_name)
+        mount.wiring_readiness.set_ready(True)
         server_status[server.id] = True
 
     return server_status

@@ -1,6 +1,6 @@
 # Getting Started
 
-**What you'll learn here:** how to run the adapter locally using Docker Compose or directly from source, how to confirm it is working, and where to go next for production deployment options.
+How to run the adapter locally using Docker Compose or directly from source, confirm it is working, and connect your agent.
 
 For production deployment options, published artifacts, and Kubernetes installs, see [Deployment](deployment.md).
 
@@ -32,18 +32,25 @@ Choose the path that matches how you want to start:
 
     Once the containers are up, the adapter listens at `http://localhost:8932`. The Playwright server is exposed at `http://localhost:8932/mcp/playwright` (the `mount_path` defined in `config.yaml`).
 
-    If you see `"status": "degraded"`, the adapter started but the upstream is not yet reachable. Check `docker compose logs playwright` — the Playwright container sometimes takes a few seconds to become ready.
+    If you see `"status": "degraded"`, the adapter started but cannot reach the upstream yet. Check `docker compose logs playwright` — the Playwright container sometimes takes a few seconds to become ready. Wait a moment and re-check `/healthz`.
 
 === "Run from source"
 
     Requires Python 3.12+ and [uv](https://docs.astral.sh/uv/).
+
+    The repo ships two config files:
+
+    - `config.yaml` — for Docker Compose; `upstream.url` points at `http://playwright:8931/mcp` (the Compose network hostname).
+    - `config.local.yaml` — for running from source; `upstream.url` already points at `http://localhost:8931/mcp`.
+
+    Use `config.local.yaml` to avoid the Compose hostname mismatch:
 
     ```bash
     git clone https://github.com/aakashH242/remote-mcp-adapter.git
     cd remote-mcp-adapter
 
     uv sync
-    uv run remote-mcp-adapter --config config.yaml
+    uv run remote-mcp-adapter --config config.local.yaml
     ```
 
     You need a running upstream MCP server for the adapter to connect to. If you want to use Playwright MCP, start it separately:
@@ -52,8 +59,6 @@ Choose the path that matches how you want to start:
     # In a separate terminal — requires Node.js and npx
     npx @playwright/mcp --headless --port 8931
     ```
-
-    The `config.yaml` in the repo already points `upstream.url` at `http://playwright:8931/mcp` (the Compose hostname). When running from source, update that URL to `http://localhost:8931/mcp`.
 
 ### Sanity check
 
@@ -136,6 +141,6 @@ After connecting your agent, ask it to list available tools. You should see tool
 
 ## Next steps
 
-- **Next:** [Core Concepts](core-concepts.md) — understand sessions, upload handles, and artifacts before you start using tools.
-- **See also:** [Configuration](configuration.md) — configure additional servers or tune timeouts.
-- **See also:** [Security](security.md) — enable bearer token auth.
+- **Next:** [Core Concepts](core-concepts.md) — sessions, upload handles, and artifacts. Worth reading before you start calling tools in anger.
+- **See also:** [Configuration](configuration.md) — add more servers or tune timeouts.
+- **See also:** [Security](security/index.md) — enable bearer token auth.

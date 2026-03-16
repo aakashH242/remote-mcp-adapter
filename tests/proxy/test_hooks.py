@@ -50,6 +50,14 @@ class _FakeClients:
         return object()
 
 
+class _FakeWiringReadiness:
+    def __init__(self) -> None:
+        self.ready = False
+
+    def set_ready(self, ready: bool) -> None:
+        self.ready = ready
+
+
 class _FakeUploadAdapter:
     def __init__(self, tools, file_path_argument="path", uri_scheme="upload://", uri_prefix=False):
         self.tools = tools
@@ -127,6 +135,7 @@ def _mount(server_id="srv", upstream_tools=None, disabled_tools=None):
         ),
         clients=_FakeClients(upstream_tools or []),
         proxy=_FakeProxy(),
+        wiring_readiness=_FakeWiringReadiness(),
     )
 
 
@@ -477,6 +486,9 @@ async def test_wire_adapters_full_flow_and_statuses(monkeypatch):
     )
 
     assert status == {"s1": True, "s2": True, "s3": False}
+    assert mount1.wiring_readiness.ready is True
+    assert mount2.wiring_readiness.ready is True
+    assert mount3.wiring_readiness.ready is False
     assert resources_added == ["s1", "s3"]
     assert tools_added == ["s1", "s3"]
     assert "Configured upload_consumer tool not found upstream" in warnings

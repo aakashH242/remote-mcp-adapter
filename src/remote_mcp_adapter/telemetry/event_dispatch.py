@@ -297,6 +297,22 @@ def _handle_session_lifecycle(manager: Any, payload: EventPayload) -> None:
     manager._sessions_lifecycle_total.add(1, attrs)
 
 
+def _handle_tool_definition_drift(manager: Any, payload: EventPayload) -> None:
+    """Write metrics for one tool-definition drift event.
+
+    Args:
+        manager: ``AdapterTelemetry`` instance.
+        payload: Event payload values.
+    """
+    attrs = {
+        "server_id": _server_id(payload),
+        "mode": payload["mode"],
+        "block_strategy": payload["block_strategy"],
+        "outcome": payload["outcome"],
+    }
+    manager._tool_definition_drift_total.add(1, attrs)
+
+
 _EVENT_HANDLERS: dict[str, EventHandler] = {
     "http_request": _handle_http_request,
     "upload_batch": _handle_upload_batch,
@@ -313,6 +329,7 @@ _EVENT_HANDLERS: dict[str, EventHandler] = {
     "adapter_wiring": _handle_adapter_wiring,
     "cleanup_cycle": _handle_cleanup_cycle,
     "session_lifecycle": _handle_session_lifecycle,
+    "tool_definition_drift": _handle_tool_definition_drift,
 }
 
 

@@ -2074,7 +2074,7 @@ wheels = [
 
 [[package]]
 name = "remote-mcp-adapter"
-version = "0.2.0"
+version = "0.3.0"
 source = { editable = "." }
 dependencies = [
     { name = "fastapi" },
@@ -2123,7 +2123,7 @@ requires-dist = [
 [package.metadata.requires-dev]
 dev = [
     { name = "black", specifier = ">=24.8.0" },
-    { name = "mkdocs", specifier = ">=1.6.1" },
+    { name = "mkdocs", specifier = ">=1.6.1,<2" },
     { name = "mkdocs-copy-to-llm", specifier = ">=0.2.10" },
     { name = "mkdocs-git-revision-date-localized-plugin", specifier = ">=1.5.1" },
     { name = "mkdocs-material", specifier = ">=9.7.4" },
