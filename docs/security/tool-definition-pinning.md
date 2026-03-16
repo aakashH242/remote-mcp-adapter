@@ -1,4 +1,4 @@
-﻿# Tool Definition Pinning
+# Tool Definition Pinning
 
 What the adapter pins, when the baseline is established, how drift is detected, and what clients should expect when the upstream catalog changes mid-session.
 

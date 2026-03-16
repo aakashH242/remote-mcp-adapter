@@ -1,4 +1,4 @@
-﻿# Tool Metadata Controls
+# Tool Metadata Controls
 
 How the adapter cleans visible tool metadata, how it can reduce or remove description prose entirely, and why both controls run before Code Mode and pinning.
 

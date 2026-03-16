@@ -1,4 +1,4 @@
-﻿# Helm Scenario: Browser-Facing Ingress
+# Helm Scenario: Browser-Facing Ingress
 
 **What you'll learn here:** how to shape a Kubernetes deployment for browser-visible links, why ingress and `public_base_url` matter together, and which values make signed uploads and artifact downloads behave cleanly for humans.
 

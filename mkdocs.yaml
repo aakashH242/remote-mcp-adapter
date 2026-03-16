@@ -1,4 +1,4 @@
-﻿site_name: Remote MCP Adapter
+site_name: Remote MCP Adapter
 site_description: "Config-driven MCP proxy that adds session-safe file uploads, artifact handling, and robust state and health controls for upstream MCP servers."
 site_url: "https://aakashh242.github.io/remote-mcp-adapter/"
 site_author: "Aakash"

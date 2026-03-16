@@ -1,4 +1,4 @@
-﻿# Security
+# Security
 
 The adapter already has a real security posture - it is not just "auth on or off." This section explains the threat model, the controls that exist today, and the deeper pages for auth and session handling, metadata controls, and tool-definition pinning.
 

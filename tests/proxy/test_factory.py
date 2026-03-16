@@ -327,3 +327,28 @@ def test_build_proxy_map_adds_tool_definition_pinning_before_code_mode(monkeypat
     transforms = proxy_ctor.calls[0]["transforms"]
     assert isinstance(transforms[0], ToolDefinitionPinningTransform)
     assert transforms[1:] == ["CODE", "a"]
+
+
+def test_build_proxy_map_does_not_bypass_list_tools_cache_without_session_store(monkeypatch):
+    server = _server(server_id="a")
+    server.tool_definition_pinning = SimpleNamespace(mode=None, block_strategy=None)
+    config = SimpleNamespace(
+        servers=[server],
+        sessions=SimpleNamespace(upstream_session_termination_retries=4),
+        core=SimpleNamespace(
+            upstream_metadata_cache_ttl_seconds=25,
+            defaults=SimpleNamespace(tool_call_timeout_seconds=7),
+            code_mode_enabled=False,
+            tool_definition_pinning=SimpleNamespace(mode="warn", block_strategy="error"),
+        ),
+    )
+
+    proxy_ctor = _CaptureCtor()
+    monkeypatch.setattr(f, "FastMCPProxy", proxy_ctor)
+    monkeypatch.setattr(f, "build_code_mode_transforms", lambda *, enabled, server_id: [])
+
+    proxy_map = f.build_proxy_map(config, session_store=None)
+
+    assert set(proxy_map.keys()) == {"a"}
+    assert proxy_map["a"].clients.bypass_list_tools_cache is False
+    assert proxy_ctor.calls[0]["transforms"] == []

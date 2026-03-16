@@ -1,4 +1,4 @@
-﻿# Current Defenses
+# Current Defenses
 
 Which security controls already exist in the adapter today, what they protect, and which config fields activate or tighten them.
 

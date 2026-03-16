@@ -360,6 +360,7 @@ def build_proxy_map(
     for server in config.servers:
         timeout_seconds = _resolve_timeout_seconds(config, server)
         pinning_policy = resolve_tool_definition_pinning_policy(config=config, server=server)
+        pinning_active = pinning_policy.enabled and session_store is not None
         wiring_readiness = ServerWiringReadiness()
         client_registry = SessionClientRegistry(
             server=server,
@@ -367,7 +368,7 @@ def build_proxy_map(
             default_timeout_seconds=timeout_seconds,
             session_termination_retries=config.sessions.upstream_session_termination_retries,
             metadata_cache_ttl_seconds=config.core.upstream_metadata_cache_ttl_seconds,
-            bypass_list_tools_cache=pinning_policy.enabled,
+            bypass_list_tools_cache=pinning_active,
         )
         proxy = FastMCPProxy(
             name=f"MCP Proxy [{server.id}]",

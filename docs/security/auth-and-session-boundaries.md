@@ -1,4 +1,4 @@
-﻿# Auth And Session Boundaries
+# Auth And Session Boundaries
 
 How the adapter handles route auth, signed upload and download URLs, session scoping, and session reuse once it starts keeping state for uploads, artifacts, and drift protection.
 

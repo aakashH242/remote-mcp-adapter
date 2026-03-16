@@ -1,4 +1,4 @@
-﻿# Threat Model
+# Threat Model
 
 This project sits between an MCP client and one or more upstream MCP servers. The attack surface is not just "can someone reach the HTTP port?" - there are a few less obvious risks worth naming explicitly.
 
