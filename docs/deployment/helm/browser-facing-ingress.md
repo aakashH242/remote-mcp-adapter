@@ -118,10 +118,10 @@ If you are still on a single durable pod, swap `values-ha-adapter.yaml` for `val
 
 ## Next steps
 
-- **Back to:** [Deploy with Helm](../helm.md) â€” Helm overview and scenario selection.
-- **Previous scenario:** [HA Adapter Tier](ha-adapter-tier.md) â€” resilience and scaling first.
-- **Next scenario:** [Observability-First Production](observability-first-production.md) â€” add telemetry-forward deployment values.
-- **See also:** [Security](../../security/index.md) â€” signed upload and download behavior.
+- **Back to:** [Deploy with Helm](../helm.md) - Helm overview and scenario selection.
+- **Previous scenario:** [HA Adapter Tier](ha-adapter-tier.md) - resilience and scaling first.
+- **Next scenario:** [Observability-First Production](observability-first-production.md) - add telemetry-forward deployment values.
+- **See also:** [Security](../../security/index.md) - signed upload and download behavior.
 
 
 

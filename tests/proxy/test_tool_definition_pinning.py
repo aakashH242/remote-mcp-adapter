@@ -132,9 +132,7 @@ def test_apply_catalog_warnings_is_non_duplicating():
     twice = apply_catalog_warnings(tools=once, drift=drift)
 
     assert twice[0].description.count("WARNING: Tool definitions changed during this adapter session.") == 1
-    assert twice[0].description.count(
-        "WARNING: This tool definition changed after the session baseline was pinned."
-    ) == 1
+    assert twice[0].description.count("WARNING: This tool definition changed after the session baseline was pinned.") == 1
 
 
 def test_build_session_warning_banner_without_preview_and_prepend_warning_edges():

@@ -127,9 +127,7 @@ def _context():
     return SimpleNamespace(
         app=app,
         resolved_config=SimpleNamespace(
-            core=SimpleNamespace(
-                auth=SimpleNamespace(enabled=True, header_name="x-adapter-auth", token="secret")
-            ),
+            core=SimpleNamespace(auth=SimpleNamespace(enabled=True, header_name="x-adapter-auth", token="secret")),
         ),
         persistence_policy=SimpleNamespace(should_reject_stateful_requests=lambda: False),
         runtime_ref={"current": object()},
@@ -375,13 +373,9 @@ async def test_in_flight_rejection_helpers(monkeypatch):
     ctx.upstream_health = {}
     assert await mr._reject_in_flight_for_breaker(context=ctx, request=req, matched_server_id=None) is None
     assert await mr._reject_in_flight_for_breaker(context=ctx, request=req, matched_server_id="s1") is None
-    ctx.upstream_health = {
-        "s1": SimpleNamespace(allow_proxy_request=lambda: _async_result((True, None)))
-    }
+    ctx.upstream_health = {"s1": SimpleNamespace(allow_proxy_request=lambda: _async_result((True, None)))}
     assert await mr._reject_in_flight_for_breaker(context=ctx, request=req, matched_server_id="s1") is None
-    ctx.upstream_health = {
-        "s1": SimpleNamespace(allow_proxy_request=lambda: _async_result((False, "blocked")))
-    }
+    ctx.upstream_health = {"s1": SimpleNamespace(allow_proxy_request=lambda: _async_result((False, "blocked")))}
     assert await mr._reject_in_flight_for_breaker(context=ctx, request=req, matched_server_id="s1") is marker
 
 

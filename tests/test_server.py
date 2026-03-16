@@ -23,9 +23,7 @@ def test_create_app_happy_and_fallback(monkeypatch):
     monkeypatch.setattr(
         server,
         "PersistencePolicyController",
-        lambda **kwargs: SimpleNamespace(
-            handle_startup_failure=lambda **k: "continue_fail_closed"
-        ),
+        lambda **kwargs: SimpleNamespace(handle_startup_failure=lambda **k: "continue_fail_closed"),
     )
 
     runtime = SimpleNamespace(state_repository=object(), lock_provider=object(), backend_type="disk")
@@ -37,9 +35,7 @@ def test_create_app_happy_and_fallback(monkeypatch):
     proxy_map = {
         "s1": SimpleNamespace(
             server=SimpleNamespace(mount_path="/mcp/s1"),
-            proxy=SimpleNamespace(
-                http_app=lambda **k: SimpleNamespace(routes=["r"])
-            ),
+            proxy=SimpleNamespace(http_app=lambda **k: SimpleNamespace(routes=["r"])),
         )
     }
     monkeypatch.setattr(

@@ -15,7 +15,6 @@ from remote_mcp_adapter.proxy.tool_description_policy.schema import apply_schema
 from remote_mcp_adapter.proxy.tool_description_policy.text import apply_description_policy
 from remote_mcp_adapter.proxy.tool_description_policy.transform import ToolDescriptionPolicyTransform
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------

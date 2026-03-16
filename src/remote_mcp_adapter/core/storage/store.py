@@ -302,7 +302,10 @@ class SessionStore:
         async with self._lock_provider.hold(self._STATE_LOCK_NAME):
             existing_tombstone = await self._state_repository.get_tombstone(key)
             if existing_tombstone is not None and existing_tombstone.terminal_reason == reason:
-                return
+                if existing_tombstone.expires_at > now:
+                    return
+                await self._state_repository.pop_tombstone(key)
+                existing_tombstone = None
 
             state = await self._state_repository.pop_session(key)
             if state is None:

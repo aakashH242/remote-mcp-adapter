@@ -25,7 +25,6 @@ from remote_mcp_adapter.proxy.tool_metadata_sanitization.transform import (
     ToolMetadataSanitizationTransform,
 )
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------

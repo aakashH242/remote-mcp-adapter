@@ -73,6 +73,33 @@ async def test_get_terminal_session_reason_drops_expired_terminal_tombstone(monk
 
 
 @pytest.mark.asyncio
+async def test_invalidate_session_refreshes_expired_terminal_tombstone(monkeypatch, tmp_path):
+    store = SessionStore(config=_config(tmp_path))
+    await store.invalidate_session(
+        server_id="playwright",
+        session_id="sess-1",
+        reason="Upstream tool catalog changed.",
+    )
+
+    key = ("playwright", "sess-1")
+    tombstone = await store._state_repository.get_tombstone(key)
+    assert tombstone is not None
+    tombstone.expires_at = 5.0
+
+    monkeypatch.setattr("remote_mcp_adapter.core.storage.store.now_ts", lambda: 10.0)
+
+    await store.invalidate_session(
+        server_id="playwright",
+        session_id="sess-1",
+        reason="Upstream tool catalog changed.",
+    )
+
+    refreshed_tombstone = await store._state_repository.get_tombstone(key)
+    assert refreshed_tombstone is not None
+    assert refreshed_tombstone.expires_at == 70.0
+
+
+@pytest.mark.asyncio
 async def test_bind_or_validate_session_trust_context_rejects_mismatch(tmp_path):
     store = SessionStore(config=_config(tmp_path))
 
@@ -254,4 +281,3 @@ async def test_artifact_lifecycle_allocate_finalize_get_list_resolve_and_snapsho
     assert snapshot["uploads_count"] == 0
     assert snapshot["artifacts_count"] == 1
     assert snapshot["session_id"] == "sess-1"
-

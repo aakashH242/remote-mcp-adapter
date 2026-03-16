@@ -8,30 +8,26 @@ from remote_mcp_adapter.scripts import render_config_reference as rc
 
 
 def test_parse_template_fields_keeps_nested_list_paths():
-    parsed = builder.parse_template_fields(
-        """
+    parsed = builder.parse_template_fields("""
 servers:
   - # Unique identifier for this server entry.
     id: "playwright"
     upstream:
       # Full URL of the upstream MCP endpoint.
       url: "http://localhost:8931/mcp"
-""".strip()
-    )
+""".strip())
 
     assert [field.path for field in parsed] == ["servers", "servers[].id", "servers[].upstream", "servers[].upstream.url"]
 
 
 def test_build_output_renders_structured_reference_and_template_appendix():
-    rendered = rc._build_output(
-        """
+    rendered = rc._build_output("""
 # core -- runtime behaviour
 core:
   # IP address the HTTP server binds to.
   # Optional. Default: "0.0.0.0"
   host: "0.0.0.0"
-""".strip()
-    )
+""".strip())
 
     assert rendered.startswith("# Detailed Reference")
     assert "## Sections" in rendered
@@ -43,8 +39,7 @@ core:
         "      # IP address the HTTP server binds to.\n"
         '      # Optional. Default: "0.0.0.0"\n'
         '      host: "0.0.0.0"\n'
-        "    ```"
-        in rendered
+        "    ```" in rendered
     )
     assert "<table>" in rendered
     assert "<th>Field</th>" in rendered
@@ -52,7 +47,7 @@ core:
         "<td><code>host</code></td>\n"
         "      <td><code>string</code></td>\n"
         "      <td>optional</td>\n"
-        '      <td>&quot;0.0.0.0&quot;</td>\n'
+        "      <td>&quot;0.0.0.0&quot;</td>\n"
         "      <td>-</td>\n"
         "      <td>-</td>\n"
         "      <td>IP address the HTTP server binds to.</td>"
@@ -63,8 +58,7 @@ core:
 
 
 def test_build_output_skips_leading_example_comment_paragraphs():
-    rendered = rc._build_output(
-        """
+    rendered = rc._build_output("""
 # core -- runtime behaviour
 core:
   # Example field
@@ -74,8 +68,7 @@ core:
   # Actual field behaviour.
   # Optional. Default: null.
   next_field: null
-""".strip()
-    )
+""".strip())
 
     assert (
         "<td><code>next_field</code></td>\n"
@@ -89,8 +82,7 @@ core:
 
 
 def test_build_output_adds_common_overrides_column():
-    rendered = rc._build_output(
-        """
+    rendered = rc._build_output("""
 # core -- runtime behaviour
 core:
   defaults:
@@ -100,8 +92,7 @@ core:
     tool_call_timeout_seconds: 60
 servers:
   - id: "playwright"
-""".strip()
-    )
+""".strip())
 
     assert "<th>Common Overrides</th>" in rendered
     assert (
@@ -117,8 +108,7 @@ servers:
 
 
 def test_build_output_extracts_multiline_server_override_targets():
-    rendered = rc._build_output(
-        """
+    rendered = rc._build_output("""
 # core -- runtime behaviour
 core:
   # When true, the server exposes FastMCP Code Mode instead of the full direct tool list.
@@ -138,8 +128,7 @@ core:
   short_description_max_tokens: 16
 servers:
   - id: "playwright"
-""".strip()
-    )
+""".strip())
 
     assert (
         "<td><code>code_mode_enabled</code></td>\n"
@@ -184,8 +173,6 @@ def test_indented_fenced_yaml_keeps_blank_lines_inside_collapsible_block():
     assert "    ```yaml" in block
     assert "\n    \n" in block
     assert "    ```" in block
-
-
 
 
 def test_write_if_changed_updates_only_on_real_diff(tmp_path: Path):

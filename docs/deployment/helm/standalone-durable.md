@@ -6,7 +6,7 @@
 
 ## What this scenario is for
 
-This is the â€œone serious podâ€ shape.
+This is the "one serious pod" shape.
 
 Choose it when:
 

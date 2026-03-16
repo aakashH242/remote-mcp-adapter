@@ -517,4 +517,3 @@ async def test_handle_artifact_producer_tool_raises_when_artifact_cannot_be_foun
             atomic_writes=True,
             lock_mode="process",
         )
-
