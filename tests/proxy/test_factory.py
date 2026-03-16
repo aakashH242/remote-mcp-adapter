@@ -5,6 +5,7 @@ from types import SimpleNamespace
 import pytest
 
 from remote_mcp_adapter.proxy import factory as f
+from remote_mcp_adapter.proxy.tool_definition_pinning import ToolDefinitionPinningTransform
 
 
 class _FakeSessionStore:
@@ -44,6 +45,7 @@ def _server(*, server_id="srv", transport="sse", insecure_tls=False, required=No
     return SimpleNamespace(
         id=server_id,
         disabled_tools=[],
+        tool_definition_pinning=SimpleNamespace(mode=None, block_strategy=None),
         upstream=SimpleNamespace(
             static_headers=static_headers or {"X-Static": "1"},
             client_headers=SimpleNamespace(required=required or [], passthrough=passthrough or []),
@@ -120,6 +122,7 @@ def test_build_client_constructs_resilient_client(monkeypatch):
         default_timeout_seconds=9,
         session_termination_retries=2,
         metadata_cache_ttl_seconds=15,
+        bypass_list_tools_cache=True,
     )
     monkeypatch.setattr(f.SessionClientRegistry, "_build_headers", lambda self, inbound=None: {"H": "1"})
     monkeypatch.setattr(f.SessionClientRegistry, "_build_transport", lambda self, headers=None: "transport")
@@ -133,6 +136,7 @@ def test_build_client_constructs_resilient_client(monkeypatch):
     assert client.default_timeout == 9
     assert client.session_termination_retries == 2
     assert client.metadata_cache_ttl_seconds == 15
+    assert client.bypass_list_tools_cache is True
 
 
 @pytest.mark.asyncio
@@ -254,6 +258,7 @@ def test_build_proxy_map_constructs_mounts(monkeypatch):
         core=SimpleNamespace(
             upstream_metadata_cache_ttl_seconds=25,
             defaults=SimpleNamespace(tool_call_timeout_seconds=7),
+            tool_definition_pinning=SimpleNamespace(mode="off", block_strategy="error"),
         ),
     )
 
@@ -265,6 +270,8 @@ def test_build_proxy_map_constructs_mounts(monkeypatch):
     assert set(proxy_map.keys()) == {"a", "b"}
     assert proxy_map["a"].server.id == "a"
     assert proxy_map["b"].server.id == "b"
+    assert proxy_map["a"].wiring_readiness.ready is False
+    assert proxy_map["b"].wiring_readiness.ready is False
     assert proxy_ctor.calls[0]["name"] == "MCP Proxy [a]"
     assert callable(proxy_ctor.calls[0]["client_factory"])
 
@@ -279,18 +286,44 @@ def test_build_proxy_map_passes_code_mode_transform_when_enabled(monkeypatch):
             upstream_metadata_cache_ttl_seconds=25,
             defaults=SimpleNamespace(tool_call_timeout_seconds=7),
             code_mode_enabled=False,
+            tool_definition_pinning=SimpleNamespace(mode="off", block_strategy="error"),
         ),
     )
 
     proxy_ctor = _CaptureCtor()
     monkeypatch.setattr(f, "FastMCPProxy", proxy_ctor)
-    monkeypatch.setattr(
-        f,
-        "build_code_mode_transforms",
-        lambda *, enabled, server_id: ["CODE", server_id] if enabled else [],
-    )
+    monkeypatch.setattr(f, "build_code_mode_transforms", lambda *, enabled, server_id: ["CODE", server_id] if enabled else [])
 
     proxy_map = f.build_proxy_map(config, session_store=None)
 
     assert set(proxy_map.keys()) == {"a"}
     assert proxy_ctor.calls[0]["transforms"] == ["CODE", "a"]
+
+
+def test_build_proxy_map_adds_tool_definition_pinning_before_code_mode(monkeypatch):
+    server = _server(server_id="a")
+    server.code_mode_enabled = True
+    server.tool_definition_pinning = SimpleNamespace(mode=None, block_strategy=None)
+    config = SimpleNamespace(
+        servers=[server],
+        sessions=SimpleNamespace(upstream_session_termination_retries=4),
+        core=SimpleNamespace(
+            upstream_metadata_cache_ttl_seconds=25,
+            defaults=SimpleNamespace(tool_call_timeout_seconds=7),
+            code_mode_enabled=False,
+            tool_definition_pinning=SimpleNamespace(mode="block", block_strategy="baseline_subset"),
+        ),
+    )
+
+    proxy_ctor = _CaptureCtor()
+    monkeypatch.setattr(f, "FastMCPProxy", proxy_ctor)
+    monkeypatch.setattr(f, "build_code_mode_transforms", lambda *, enabled, server_id: ["CODE", server_id] if enabled else [])
+
+    store = object()
+    proxy_map = f.build_proxy_map(config, session_store=store)
+
+    assert set(proxy_map.keys()) == {"a"}
+    assert proxy_map["a"].clients.bypass_list_tools_cache is True
+    transforms = proxy_ctor.calls[0]["transforms"]
+    assert isinstance(transforms[0], ToolDefinitionPinningTransform)
+    assert transforms[1:] == ["CODE", "a"]

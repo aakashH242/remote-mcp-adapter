@@ -15,9 +15,12 @@ from uuid import uuid4
 from fastmcp.exceptions import ToolError
 
 from ...config import AdapterConfig
+from ...session_integrity.models import SessionTrustContext
 from ..locks.lock_provider import InMemoryLockProvider, LockProvider
 from ..repo.records import ArtifactRecord, SessionState, SessionTombstone, UploadRecord, now_ts
+from ..repo.records import ToolDefinitionBaseline, ToolDefinitionDriftSummary
 from ..repo.state_repository import InMemoryStateRepository, SessionKey, StateRepository
+from .errors import SessionTrustContextMismatchError, TerminalSessionInvalidatedError
 from .store_ops import StoreOps
 from .storage_utils import (
     ARTIFACT_URI_RE,
@@ -172,7 +175,15 @@ class SessionStore:
         async with self._lock_provider.hold(self._STATE_LOCK_NAME):
             tombstone = await self._state_repository.get_tombstone(key)
             if tombstone is not None:
-                if tombstone.expires_at > now:
+                if tombstone.terminal_reason is not None:
+                    if tombstone.expires_at > now:
+                        raise TerminalSessionInvalidatedError(self._terminal_session_message(tombstone.terminal_reason))
+                    await self._state_repository.pop_tombstone(key)
+                    logger.info(
+                        "Expired terminal session tombstone removed during session lookup",
+                        extra={"server_id": server_id, "session_id": session_id},
+                    )
+                elif tombstone.expires_at > now:
                     state = tombstone.state
                     state.touch(now)
                     await self._persist_session_state(state)
@@ -184,11 +195,12 @@ class SessionStore:
                     if self._telemetry is not None:
                         await self._telemetry.record_session_lifecycle(event="revived", server_id=server_id)
                     return state
-                await self._state_repository.pop_tombstone(key)
-                logger.info(
-                    "Expired tombstone removed during session lookup",
-                    extra={"server_id": server_id, "session_id": session_id},
-                )
+                else:
+                    await self._state_repository.pop_tombstone(key)
+                    logger.info(
+                        "Expired tombstone removed during session lookup",
+                        extra={"server_id": server_id, "session_id": session_id},
+                    )
 
             state = await self._state_repository.get_session(key)
             if state is None:
@@ -206,6 +218,21 @@ class SessionStore:
                     await self._telemetry.record_session_lifecycle(event="created", server_id=server_id)
             return state
 
+    @staticmethod
+    def _terminal_session_message(reason: str) -> str:
+        """Build the session-invalidated message shown to clients.
+
+        Args:
+            reason: Human-readable invalidation reason.
+
+        Returns:
+            Error message instructing the client to start a new session.
+        """
+        return (
+            f"{reason} This adapter session was invalidated. "
+            "Start a new Mcp-Session-Id to accept the updated upstream state."
+        )
+
     async def get_session(self, server_id: str, session_id: str) -> SessionState | None:
         """Return existing session state, if any.
 
@@ -215,6 +242,232 @@ class SessionStore:
         """
         async with self._lock_provider.hold(self._STATE_LOCK_NAME):
             return await self._state_repository.get_session(self._session_key(server_id, session_id))
+
+    async def get_session_trust_context(self, server_id: str, session_id: str) -> SessionTrustContext | None:
+        """Return the bound trust context for one session, if any.
+
+        Args:
+            server_id: Server identifier.
+            session_id: Session identifier.
+
+        Returns:
+            Bound trust context or ``None`` when the session has not bound one.
+        """
+        state = await self.get_session(server_id, session_id)
+        if state is None:
+            return None
+        return state.trust_context
+
+    async def get_terminal_session_reason(self, server_id: str, session_id: str) -> str | None:
+        """Return the terminal invalidation reason for a session, if any.
+
+        Args:
+            server_id: Server identifier.
+            session_id: Session identifier.
+
+        Returns:
+            Terminal invalidation reason or ``None``.
+        """
+        key = self._session_key(server_id, session_id)
+        now = now_ts()
+        async with self._lock_provider.hold(self._STATE_LOCK_NAME):
+            tombstone = await self._state_repository.get_tombstone(key)
+            if tombstone is None or tombstone.terminal_reason is None:
+                return None
+            if tombstone.expires_at <= now:
+                await self._state_repository.pop_tombstone(key)
+                logger.info(
+                    "Expired terminal session tombstone removed during reason lookup",
+                    extra={"server_id": server_id, "session_id": session_id},
+                )
+                return None
+            return tombstone.terminal_reason
+
+    async def invalidate_session(
+        self,
+        *,
+        server_id: str,
+        session_id: str,
+        reason: str,
+    ) -> None:
+        """Invalidate one adapter session and block reuse of the same session id.
+
+        Args:
+            server_id: Server identifier.
+            session_id: Session identifier.
+            reason: Human-readable invalidation reason.
+        """
+        key = self._session_key(server_id, session_id)
+        now = now_ts()
+        async with self._lock_provider.hold(self._STATE_LOCK_NAME):
+            existing_tombstone = await self._state_repository.get_tombstone(key)
+            if existing_tombstone is not None and existing_tombstone.terminal_reason == reason:
+                return
+
+            state = await self._state_repository.pop_session(key)
+            if state is None:
+                state = (
+                    existing_tombstone.state
+                    if existing_tombstone is not None
+                    else SessionState(
+                        server_id=server_id,
+                        session_id=session_id,
+                        created_at=now,
+                        last_accessed=now,
+                    )
+                )
+            await self._state_repository.pop_tombstone(key)
+            await self._ops.purge_state_files_async(state)
+            state.uploads.clear()
+            state.artifacts.clear()
+            state.in_flight = 0
+            state.touch(now)
+            expires_at = now + self._config.sessions.tombstone_ttl_seconds
+            await self._state_repository.set_tombstone(
+                key,
+                SessionTombstone(
+                    state=state,
+                    expires_at=expires_at,
+                    terminal_reason=reason,
+                ),
+            )
+
+        logger.warning(
+            "Session invalidated",
+            extra={"server_id": server_id, "session_id": session_id, "reason": reason},
+        )
+        if self._telemetry is not None:
+            await self._telemetry.record_session_lifecycle(event="tool_definition_invalidated", server_id=server_id)
+
+    async def bind_or_validate_session_trust_context(
+        self,
+        *,
+        server_id: str,
+        session_id: str,
+        trust_context: SessionTrustContext,
+    ) -> None:
+        """Bind or validate the adapter trust context for one session.
+
+        Args:
+            server_id: Server identifier.
+            session_id: Session identifier.
+            trust_context: Request-derived trust context to enforce.
+
+        Raises:
+            SessionTrustContextMismatchError: If the request does not match the
+                trust context already bound to the session.
+        """
+        state = await self.ensure_session(server_id, session_id)
+        async with state.lock:
+            existing = state.trust_context
+            if existing is None:
+                state.trust_context = trust_context
+                state.touch()
+                await self._persist_session_state(state)
+                if self._telemetry is not None:
+                    await self._telemetry.record_session_lifecycle(event="auth_context_bound", server_id=server_id)
+                return
+            if existing == trust_context:
+                return
+        raise SessionTrustContextMismatchError(self._session_trust_context_mismatch_message())
+
+    @staticmethod
+    def _session_trust_context_mismatch_message() -> str:
+        """Build the client-facing error for a bound session-context mismatch.
+
+        Returns:
+            Error message instructing the client to reuse the same auth context
+            or start a new adapter session.
+        """
+        return (
+            "This adapter session is already bound to a different authenticated request context. "
+            "Retry with the same adapter auth token that established the session, or start a new Mcp-Session-Id."
+        )
+
+    async def get_tool_definition_baseline(self, server_id: str, session_id: str) -> ToolDefinitionBaseline | None:
+        """Return the pinned tool-definition baseline for one session, if present.
+
+        Args:
+            server_id: Server identifier.
+            session_id: Session identifier.
+
+        Returns:
+            Pinned baseline or ``None`` when the session has not pinned one yet.
+        """
+        state = await self.get_session(server_id, session_id)
+        if state is None:
+            return None
+        return state.tool_definition_baseline
+
+    async def set_tool_definition_baseline(
+        self,
+        server_id: str,
+        session_id: str,
+        baseline: ToolDefinitionBaseline,
+    ) -> None:
+        """Persist the pinned tool-definition baseline for one session.
+
+        Args:
+            server_id: Server identifier.
+            session_id: Session identifier.
+            baseline: Baseline to persist.
+        """
+        state = await self.ensure_session(server_id, session_id)
+        async with state.lock:
+            state.tool_definition_baseline = baseline
+            state.touch()
+            await self._persist_session_state(state)
+
+    async def get_tool_definition_drift_summary(self, server_id: str, session_id: str) -> ToolDefinitionDriftSummary | None:
+        """Return the last drift summary for one session, if present.
+
+        Args:
+            server_id: Server identifier.
+            session_id: Session identifier.
+
+        Returns:
+            Stored drift summary or ``None``.
+        """
+        state = await self.get_session(server_id, session_id)
+        if state is None:
+            return None
+        return state.tool_definition_drift_summary
+
+    async def set_tool_definition_drift_summary(
+        self,
+        server_id: str,
+        session_id: str,
+        summary: ToolDefinitionDriftSummary,
+    ) -> None:
+        """Persist the last tool-definition drift summary for one session.
+
+        Args:
+            server_id: Server identifier.
+            session_id: Session identifier.
+            summary: Drift summary to persist.
+        """
+        state = await self.ensure_session(server_id, session_id)
+        async with state.lock:
+            state.tool_definition_drift_summary = summary
+            state.touch()
+            await self._persist_session_state(state)
+
+    async def clear_tool_definition_drift_summary(self, server_id: str, session_id: str) -> None:
+        """Clear any persisted tool-definition drift summary for one session.
+
+        Args:
+            server_id: Server identifier.
+            session_id: Session identifier.
+        """
+        state = await self.get_session(server_id, session_id)
+        if state is None:
+            return
+        async with state.lock:
+            if state.tool_definition_drift_summary is None:
+                return
+            state.tool_definition_drift_summary = None
+            state.touch()
+            await self._persist_session_state(state)
 
     async def touch_tool_activity(self, server_id: str, session_id: str) -> None:
         """Touch session activity for tool-call related operations.

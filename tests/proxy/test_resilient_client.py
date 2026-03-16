@@ -16,6 +16,7 @@ def _make_client(*, default_timeout=9, retries=1, cache_ttl=30):
     client._session_termination_retries = retries
     client._reconnect_lock = asyncio.Lock()
     client._metadata_cache_ttl_seconds = cache_ttl
+    client._bypass_list_tools_cache = False
     client._metadata_cache = {}
     client._metadata_cache_lock = asyncio.Lock()
     client._metadata_fetch_locks = {}
@@ -53,11 +54,13 @@ def test_init_sets_fields_and_clone_helpers(monkeypatch):
         default_timeout=4,
         session_termination_retries=-1,
         metadata_cache_ttl_seconds=-2,
+        bypass_list_tools_cache=True,
     )
 
     assert client._default_timeout == 4
     assert client._session_termination_retries == 0
     assert client._metadata_cache_ttl_seconds == 0
+    assert client._bypass_list_tools_cache is True
     assert rc.ResilientClient._clone_cached_value([1]) == [1]
     assert rc.ResilientClient._clone_cached_value("x") == "x"
 
@@ -293,6 +296,22 @@ async def test_list_wrappers_delegate_to_cached_retry(monkeypatch):
         ("list_resource_templates", "list_resource_templates"),
         ("list_prompts", "list_prompts"),
     ]
+
+
+@pytest.mark.asyncio
+async def test_list_tools_bypasses_cache_when_configured(monkeypatch):
+    client = _make_client()
+    client._bypass_list_tools_cache = True
+    calls: list[str] = []
+
+    async def fake_uncached():
+        calls.append("uncached")
+        return ["list_tools"]
+
+    monkeypatch.setattr(client, "list_tools_uncached", fake_uncached)
+
+    assert await client.list_tools() == ["list_tools"]
+    assert calls == ["uncached"]
 
 
 @pytest.mark.asyncio

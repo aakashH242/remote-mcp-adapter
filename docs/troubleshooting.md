@@ -1,6 +1,6 @@
 # Troubleshooting
 
-**What you'll learn here:** common failures, likely causes, and practical fixes.
+Common failures, why they happen, and how to actually fix them.
 
 ---
 
@@ -8,28 +8,30 @@
 
 **Symptom:** Tool call like `browser_file_upload(paths=["/Users/me/report.pdf"])` fails upstream with file-not-found.
 
-**Cause:** The path exists on the client machine, not on the upstream server machine.
+**What's going on:** That path exists on your machine, not on the upstream server. Sending it directly has never worked in a remote setup — it just usually fails quietly in a confusing way.
 
-**Fix:** Use staged upload flow:
+**Fix:** Use the staged upload flow:
 
 1. Call `<server_id>_get_upload_url(...)`.
-2. POST file(s) to returned URL.
-3. Pass returned `upload://` handle(s) to upload tools.
+2. POST your file(s) to the returned URL.
+3. Pass the returned `upload://` handle(s) to the tool instead of the local path.
 
-See [Core Concepts](core-concepts.md).
+See [Core Concepts](core-concepts.md) for a fuller explanation of how this works.
 
 ---
 
 ## I do not see `<server_id>_get_upload_url`
 
-**Symptom:** No helper tool appears in tool list.
+**Symptom:** The helper tool is nowhere in the tool list.
 
-**Cause:** Helper tool is registered only when:
+**What's going on:** The upload helper only registers when two things are both true:
 
-- that server has at least one `upload_consumer` adapter
+- that server has at least one `upload_consumer` adapter configured
 - `uploads.enabled` is `true`
 
-**Fix:** Verify both config conditions and confirm client is connected to adapter mount path (not directly to upstream).
+If either is missing, the helper is silently absent. This is one of the more confusing first-run experiences, especially if you expect the tool to just appear.
+
+**Fix:** Check both conditions in your config, and confirm your agent is connecting to the adapter's `mount_path`, not directly to the upstream server.
 
 ---
 
@@ -37,50 +39,50 @@ See [Core Concepts](core-concepts.md).
 
 **Symptom:** `resources/read` on an `artifact://` URI returns not found.
 
-**Cause:** Artifact exceeded `artifacts.ttl_seconds` and was cleaned up.
+**What's going on:** The artifact hit its TTL and the cleanup job swept it. Artifacts are not permanent — they expire.
 
-**Fix:** Read sooner, or increase TTL:
+**Fix:** Read artifacts sooner after they are produced, or extend the TTL:
 
 ```yaml
 artifacts:
   ttl_seconds: 3600
 ```
 
-If needed, enable HTTP artifact downloads (`core.allow_artifacts_download`) and fetch before expiry.
+If you need to share or download artifacts before they expire, enable HTTP artifact downloads (`core.allow_artifacts_download`) as a backup path.
 
 ---
 
 ## Circuit breaker is open
 
-**Symptom:** Calls fail fast; `/healthz` shows breaker state `open`.
+**Symptom:** Calls fail fast; `/healthz` shows `"state": "open"` in the breaker block.
 
-**Cause:** Upstream failed health pings enough times to open breaker.
+**What's going on:** The upstream failed health pings enough times that the breaker tripped. The adapter is now rejecting calls to that server without even trying to reach it — by design.
 
-**Fix:** Recover upstream first. Breaker probes automatically after `open_cooldown_seconds` and closes on successful probes.
+**Fix:** Get the upstream healthy first. The breaker probes automatically after `open_cooldown_seconds` and closes itself once upstream starts responding again. There is nothing to manually reset.
 
 ---
 
 ## Auth rejected (HTTP 403)
 
-**Symptom:** Requests return `403` with auth error.
+**Symptom:** Requests return `403` with an auth error.
 
-**Cause:** Missing or incorrect adapter auth header/token for protected routes.
+**What's going on:** The adapter auth header is missing, wrong, or using the wrong header name.
 
-**Fix:** Send configured `core.auth.header_name` with configured token value in MCP client settings.
+**Fix:** Send the header configured in `core.auth.header_name` with the correct token value. Check your MCP client config — the header needs to be present on every request, not just the first one.
 
 ---
 
 ## Upload rejected: missing/invalid signed credential (HTTP 403)
 
-**Symptom:** Upload POST to signed upload URL returns `403`.
+**Symptom:** Upload POST to a signed upload URL returns `403`.
 
-**Cause:** Signed upload params are missing, invalid, replayed, or expired.
+**What's going on:** Signed upload credentials are one-time, session-scoped, and short-lived. If any of those conditions break — expired, wrong session, already used — the server rejects the upload.
 
 **Fix:**
 
-- Call `<server_id>_get_upload_url(...)` again and use the new URL immediately.
-- Ensure `Mcp-Session-Id` matches the same session used to issue the URL.
-- Increase `core.auth.signed_upload_ttl_seconds` for slower environments.
+- Call `<server_id>_get_upload_url(...)` again and use the fresh URL immediately.
+- Confirm the `Mcp-Session-Id` you are using for the upload matches the one used when you requested the URL.
+- If you are on a slow network or doing large uploads, bump the TTL:
 
 ```yaml
 core:
@@ -92,40 +94,46 @@ core:
 
 ## Tool list is stale
 
-**Symptom:** Missing or outdated tools/resources after upstream changes.
+**Symptom:** Tools or resources are missing or out of date after you changed something upstream.
 
-**Cause:** Metadata cache TTL (`core.upstream_metadata_cache_ttl_seconds`) has not expired.
+**What's going on:** The adapter caches upstream tool lists. After an upstream redeploy or tool change, clients keep seeing the cached version until the TTL expires. Default TTL is 5 minutes.
 
-**Fix:** Lower TTL in development:
+**Fix:** Lower TTL while iterating:
 
 ```yaml
 core:
   upstream_metadata_cache_ttl_seconds: 10
 ```
 
+Bump it back up before you ship to production.
+
 ---
 
 ## Adapter starts degraded
 
-**Symptom:** `/healthz` shows `status: degraded` at startup.
+**Symptom:** `/healthz` shows `"status": "degraded"` right after startup.
 
-**Cause:** Upstream did not become ready within `core.max_start_wait_seconds`.
+**What's going on:** The upstream did not become ready within `core.max_start_wait_seconds`. The adapter started anyway but is reporting it could not confirm the upstream was healthy.
 
-**Fix:** Increase startup wait, or improve upstream startup ordering/readiness checks.
+**Fix:** Check `docker compose logs <upstream>` or the upstream pod logs first — the upstream container itself may be the slow one. If startup ordering is unavoidably slow, raise the startup wait:
+
+```yaml
+core:
+  max_start_wait_seconds: 60
+```
 
 ---
 
 ## Multi-replica adapter behaves inconsistently
 
-**Symptom:** sessions disappear after a pod restart, requests behave differently across replicas, or the service is unstable once traffic starts spreading across multiple adapter pods.
+**Symptom:** Sessions disappear after a pod restart, requests behave differently across replicas, or the service is unstable once traffic spreads across multiple adapter pods.
 
-**Cause:** Multiple adapter replicas are running without a shared state backend. Node-local disk is fine for one adapter pod, but it is not enough once session metadata must be shared across replicas.
+**What's going on:** Multiple replicas are running without shared state. Each pod has its own session database — so a client that reconnects to a different replica starts fresh. This is the fundamental HA gap.
 
 **Fix:**
 
-- if you only need one adapter pod, stay on disk-backed state
-- if you want multiple adapter replicas, configure Redis for `state_persistence`
-- make sure every adapter replica can also reach the same shared file storage when uploads or artifacts are involved
+- If one adapter pod is enough, this problem does not apply — stay on disk-backed state.
+- If you need multiple replicas, move to Redis for `state_persistence`:
 
 ```yaml
 state_persistence:
@@ -135,27 +143,30 @@ state_persistence:
     port: 6379
 ```
 
+Also confirm every replica can reach the same shared file storage — Redis handles session metadata, but upload and artifact files still live on disk and all replicas need the same disk.
+
 ---
 
 ## Redis-backed deployment will not come up
 
-**Symptom:** pods restart, `/healthz` reports persistence problems, or startup fails after switching to Redis-backed state.
+**Symptom:** Pods restart, `/healthz` reports persistence problems, or startup fails after switching to Redis.
 
-**Cause:** Redis is configured as mandatory state, but the adapter cannot connect to it because the host, port, password, network policy, or secret wiring is wrong.
+**What's going on:** Redis is configured but the adapter cannot connect — wrong host, wrong port, wrong password, or a network policy is blocking the path.
 
 **Fix:**
 
-- confirm the Redis service name resolves from the adapter pod
-- verify the configured password and injected secret values
-- check whether network policies or namespace boundaries block access
-- if Redis is intentionally unavailable, do not use a Redis-required HA shape yet
+- Confirm the Redis service name resolves from inside the adapter pod (`kubectl exec` and try a `redis-cli ping`)
+- Check the configured password and how it is injected (env var vs secret)
+- Check whether namespace-level network policies block cross-service traffic
+- If Redis is intentionally not available yet, do not configure a Redis-required setup until it is
 
 ---
 
 ## Next steps
 
-- **Previous topic:** [Health](health.md) - understand degraded states and probe behavior.
-- **Next:** [API Reference](api/index.md) - public entry points first, then internals.
-- **See also:** [Post-Install Verification](deployment/helm/post-install-verification.md) - the quickest way to catch deployment wiring problems before users do.
-- **See also:** [Core Concepts](core-concepts.md) - sessions, handles, artifacts.
-- **See also:** [Security](security.md) - exact auth and signed URL behavior.
+If you are still stuck, the most useful next reads are:
+
+- [Health](health.md) — understand what the health payload is telling you before you dig further
+- [Post-Install Verification](deployment/helm/post-install-verification.md) — fastest way to catch wiring problems in a Helm deployment
+- [Core Concepts](core-concepts.md) — sessions, upload handles, and artifact URIs from first principles
+- [Security](security/index.md) — exact auth and signed URL behavior if you are fighting 403s

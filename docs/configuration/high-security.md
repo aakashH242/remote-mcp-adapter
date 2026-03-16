@@ -1,6 +1,6 @@
 # High-Security Scenario
 
-**What you'll learn here:** which settings matter most when the adapter is exposed to untrusted clients or shared environments, which defaults should become stricter, and how to reduce the blast radius of uploads, artifacts, and tool execution.
+A security-hardened profile for exposed or shared environments. Tightens auth, reduces browser exposure, requires checksums, and caps resources. 
 
 ---
 
@@ -36,7 +36,7 @@ A typical high-security deployment assumes:
 - filesystem escape risks should be minimized
 - operators prefer explicit failures over permissive fallback behavior
 
-If you are asking, “What should we tighten before we call this safe enough?”, this is the right scenario.
+If you are asking, "What should we tighten before we call this safe enough?", this is the right scenario.
 
 ---
 
@@ -51,13 +51,19 @@ core:
   public_base_url: "https://mcp-adapter.example.com"
   allow_artifacts_download: false
   code_mode_enabled: false
+  tool_metadata_sanitization:
+    mode: "sanitize"
+  tool_definition_pinning:
+    mode: "block"
+    block_strategy: "error"
+    block_error_session_action: "invalidate"
 ```
 
-Why:
+`public_base_url` should be explicit in secure deployments so generated URLs never depend on inferred internal addresses. `allow_artifacts_download: false` removes one HTTP access surface unless you truly need browser- or URL-based artifact fetches. `code_mode_enabled: false` keeps the default behavior predictable unless you have a specific reason to expose Code Mode.
 
-- `public_base_url` should be explicit in secure deployments so generated URLs never depend on inferred internal addresses.
-- `allow_artifacts_download: false` removes one HTTP access surface unless you truly need browser- or URL-based artifact fetches.
-- `code_mode_enabled: false` keeps the default behavior predictable unless you have a specific reason to expose Code Mode.
+`tool_metadata_sanitization.mode: "sanitize"` is now the general default, and it is a good place to stay for many deployments. This profile keeps it explicit so the security intent is obvious in review. `tool_definition_pinning.mode: "block"` is stricter than the general default of `warn`. It treats upstream catalog drift as a session-boundary event instead of only surfacing a warning.
+
+If you connect to semi-trusted or untrusted upstreams and want to go further, `tool_description_policy` is the next step. It can truncate or strip description prose before that text reaches the client or model.
 
 Even when artifact downloads stay off, `public_base_url` still matters if you expose `<server_id>_get_upload_url(...)`. It keeps signed upload URLs anchored to the public address your clients are supposed to use.
 
@@ -73,12 +79,7 @@ core:
     signed_upload_ttl_seconds: 120
 ```
 
-Why:
-
-- auth must be enabled
-- the main token and signing secret should be separate
-- a shorter signed upload TTL reduces replay opportunity and stale-link exposure
-- all secrets should come from environment interpolation, not committed literals
+Auth must be enabled. The main token and signing secret should be separate. A shorter signed upload TTL reduces replay opportunity and stale-link exposure. All secrets should come from environment interpolation, not committed literals.
 
 If your users regularly upload large files over slower networks, increase the TTL carefully rather than disabling signing discipline.
 
@@ -90,10 +91,7 @@ core:
     enabled: false
 ```
 
-Why:
-
-- if the adapter does not need to be called directly from browsers, keep CORS off
-- every unnecessary browser-facing surface is one more thing to reason about
+If the adapter does not need to be called directly from browsers, keep CORS off. Every unnecessary browser-facing surface is one more thing to reason about.
 
 If browser access is required, use a very tight allow-list:
 
@@ -115,10 +113,7 @@ state_persistence:
   unavailable_policy: "fail_closed"
 ```
 
-Why:
-
-- secure deployments should prefer explicit failure to silent degraded behavior
-- if shared state or durable state is unavailable, serving requests from an uncertain fallback mode is usually the wrong security posture
+Secure deployments should prefer explicit failure to silent degraded behavior. If shared state or durable state is unavailable, serving requests from an uncertain fallback mode is usually the wrong security posture.
 
 For distributed deployments, avoid `fallback_memory`. For single-node deployments, use it only if you have consciously accepted the tradeoff.
 
@@ -133,12 +128,7 @@ storage:
   artifact_locator_allowed_roots: []
 ```
 
-Why:
-
-- `artifact_locator_policy: "storage_only"` is the safest baseline because it prevents artifact lookup from wandering into broader configured roots
-- leaving `artifact_locator_allowed_roots` empty avoids accidental path expansion
-- `max_size` prevents storage exhaustion from becoming a silent denial-of-service vector
-- `lock_mode: "auto"` is fine as long as the underlying persistence topology is already correct
+`artifact_locator_policy: "storage_only"` is the safest baseline because it prevents artifact lookup from wandering into broader configured roots. Leaving `artifact_locator_allowed_roots` empty avoids accidental path expansion. `max_size` prevents storage exhaustion from becoming a silent denial-of-service vector. `lock_mode: "auto"` is fine as long as the underlying persistence topology is already correct.
 
 Only use `allow_configured_roots` when you have a very specific and reviewed need.
 
@@ -164,12 +154,7 @@ artifacts:
   expose_as_resources: true
 ```
 
-Why:
-
-- secure deployments should set explicit ceilings instead of trusting defaults
-- `require_sha256: true` adds integrity checking to file intake
-- shorter TTLs reduce the lifetime of uploaded and generated content
-- tighter `max_file_bytes` and `max_per_session` reduce abuse potential and accidental runaway workflows
+Secure deployments should set explicit ceilings instead of trusting defaults. `require_sha256: true` adds integrity checking to file intake. Shorter TTLs reduce the lifetime of uploaded and generated content. Tighter `max_file_bytes` and `max_per_session` reduce abuse potential and accidental runaway workflows.
 
 These numbers are starting points, not universal truths. The important part is to define real limits.
 
@@ -190,11 +175,7 @@ servers:
       url: "http://playwright.internal:8931/mcp"
 ```
 
-Why:
-
-- not every upstream tool belongs in every environment
-- hiding risky, admin-like, or experimental tools reduces accidental exposure
-- per-server review is often more valuable than global hand-waving about “security”
+Not every upstream tool belongs in every environment. Hiding risky, admin-like, or experimental tools reduces accidental exposure. Per-server review is often more valuable than global hand-waving about "security."
 
 ### Telemetry
 
@@ -203,11 +184,7 @@ telemetry:
   enabled: true
 ```
 
-Why:
-
-- security without visibility is weak operations
-- even minimal telemetry helps detect misuse patterns, failures, and pressure on uploads or sessions
-- in serious environments, telemetry and logs are part of the security posture, not separate from it
+Security without visibility is weak operations. Even minimal telemetry helps detect misuse patterns, failures, and pressure on uploads or sessions. In serious environments, telemetry and logs are part of the security posture, not separate from it.
 
 ---
 
@@ -293,6 +270,9 @@ Compared to a more permissive setup, this profile deliberately:
 - shortens the lifetime of signed upload URLs
 - prefers no browser CORS by default
 - disables HTTP artifact downloads unless explicitly needed
+- gives you a clean place to truncate or strip upstream description prose when needed
+- cleans model-visible tool metadata before forwarding it
+- treats mid-session tool-definition drift as a session-boundary event
 - keeps artifact resolution inside the storage root
 - requires upload checksums
 - applies real limits to sessions, uploads, and artifacts
@@ -338,6 +318,6 @@ If the main problem is capacity pressure rather than exposure risk, the next mor
 
 - **Back to:** [Configuration](../configuration.md) — overview and scenario index.
 - **Previous scenario:** [Distributed Production Scenario](distributed-production.md) — topology first, then hardening.
-- **See also:** [Security](../security.md) — header auth, signed URLs, and protected endpoints.
+- **See also:** [Security](../security/index.md) — header auth, signed URLs, and protected endpoints.
 - **See also:** [Config Reference](config-reference.md) — exact fields for auth, CORS, storage, and limits.
 - **Next scenario:** [Restricted-Limits Scenario](restricted-limits.md) — tighten resource ceilings for shared environments.

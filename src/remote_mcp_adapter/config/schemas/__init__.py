@@ -22,6 +22,23 @@ from .root import AdapterConfig, config_to_dict, resolve_storage_lock_mode, reso
 from .server import ServerConfig
 from .storage import ArtifactsConfig, SessionsConfig, StorageConfig, UploadsConfig
 from .telemetry import TelemetryConfig, TelemetryTransport
+from .tool_description_policy import (
+    ToolDescriptionPolicyConfig,
+    ToolDescriptionPolicyMode,
+    ToolDescriptionPolicyOverridesConfig,
+)
+from .tool_metadata_sanitization import (
+    ToolMetadataSanitizationConfig,
+    ToolMetadataSanitizationMode,
+    ToolMetadataSanitizationOverridesConfig,
+)
+from .tool_definition_pinning import (
+    ToolDefinitionPinningBlockStrategy,
+    ToolDefinitionPinningConfig,
+    ToolDefinitionPinningMode,
+    ToolDefinitionPinningOverridesConfig,
+    ToolDefinitionPinningSessionAction,
+)
 from .upstream import UpstreamClientHeadersConfig, UpstreamConfig
 
 __all__ = [
@@ -48,6 +65,17 @@ __all__ = [
     "StorageLockMode",
     "TelemetryConfig",
     "TelemetryTransport",
+    "ToolDescriptionPolicyConfig",
+    "ToolDescriptionPolicyMode",
+    "ToolDescriptionPolicyOverridesConfig",
+    "ToolMetadataSanitizationConfig",
+    "ToolMetadataSanitizationMode",
+    "ToolMetadataSanitizationOverridesConfig",
+    "ToolDefinitionPinningBlockStrategy",
+    "ToolDefinitionPinningConfig",
+    "ToolDefinitionPinningMode",
+    "ToolDefinitionPinningOverridesConfig",
+    "ToolDefinitionPinningSessionAction",
     "ToolDefaults",
     "UploadConsumerAdapterConfig",
     "UploadsConfig",

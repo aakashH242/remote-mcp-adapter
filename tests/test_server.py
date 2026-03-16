@@ -42,7 +42,11 @@ def test_create_app_happy_and_fallback(monkeypatch):
             ),
         )
     }
-    monkeypatch.setattr(server, "build_proxy_map", lambda cfg, session_store: proxy_map)
+    monkeypatch.setattr(
+        server,
+        "build_proxy_map",
+        lambda cfg, session_store, telemetry=None: proxy_map,
+    )
     monkeypatch.setattr(server, "build_upload_nonce_store", lambda **kwargs: object())
     monkeypatch.setattr(server, "UploadCredentialManager", SimpleNamespace(from_config=lambda *a, **k: object()))
     monkeypatch.setattr(server, "ArtifactDownloadCredentialManager", SimpleNamespace(from_config=lambda c: object()))

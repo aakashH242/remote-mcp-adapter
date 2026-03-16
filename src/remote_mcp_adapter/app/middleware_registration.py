@@ -11,8 +11,13 @@ from fastapi.responses import JSONResponse
 from fastmcp.exceptions import ToolError
 
 from ..constants import GLOBAL_SERVER_ID, MCP_SESSION_ID_HEADER, UNKNOWN_SERVER_ID
-from ..core import PersistenceUnavailableError
+from ..core import (
+    PersistenceUnavailableError,
+    SessionTrustContextMismatchError,
+    TerminalSessionInvalidatedError,
+)
 from ..proxy.cancellation import ProxySessionContext, parse_mcp_envelope
+from ..session_integrity import build_adapter_auth_trust_candidate
 from .auth_helpers import (
     upload_prefix_parts,
     is_oauth_discovery_path,
@@ -271,6 +276,7 @@ async def _evaluate_signed_upload_auth(
             return False, response
 
     if upload_server_id and session_id and credential_valid:
+        request.state.upload_signed_auth = True
         return True, None
 
     response = await _auth_rejection_json_response(
@@ -377,6 +383,15 @@ async def _begin_in_flight_or_reject(
             request=request,
             reason="in_flight_persistence_unavailable",
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            content={"detail": str(exc)},
+            server_id=matched_server_id,
+        )
+    except TerminalSessionInvalidatedError as exc:
+        return await _rejection_json_response(
+            context=context,
+            request=request,
+            reason="session_invalidated",
+            status_code=status.HTTP_409_CONFLICT,
             content={"detail": str(exc)},
             server_id=matched_server_id,
         )
@@ -492,6 +507,56 @@ async def _track_in_flight_request(
         )
 
 
+async def _enforce_session_trust_context(
+    *,
+    context: MiddlewareRegistrationContext,
+    request: Request,
+) -> JSONResponse | None:
+    """Bind or validate adapter-auth trust context for one stateful request.
+
+    Args:
+        context: Shared middleware registration dependencies.
+        request: Incoming request after auth has succeeded.
+
+    Returns:
+        Rejection response when the request does not match the bound session
+        trust context, otherwise ``None``.
+    """
+    candidate = build_adapter_auth_trust_candidate(
+        request=request,
+        config=context.resolved_config,
+        mount_path_to_server_id=context.mount_path_to_server_id,
+        upload_path_prefix=context.upload_path_prefix,
+    )
+    if candidate is None:
+        return None
+
+    try:
+        await context.session_store.bind_or_validate_session_trust_context(
+            server_id=candidate.server_id,
+            session_id=candidate.session_id,
+            trust_context=candidate.trust_context,
+        )
+    except SessionTrustContextMismatchError as exc:
+        logger.warning(
+            "Session trust context mismatch rejected",
+            extra={
+                "server_id": candidate.server_id,
+                "session_id": candidate.session_id,
+                "binding_kind": candidate.trust_context.binding_kind,
+            },
+        )
+        return await _rejection_json_response(
+            context=context,
+            request=request,
+            reason="session_trust_context_mismatch",
+            status_code=status.HTTP_409_CONFLICT,
+            content={"detail": str(exc)},
+            server_id=candidate.server_id,
+        )
+    return None
+
+
 async def _process_auth_request(
     *,
     context: MiddlewareRegistrationContext,
@@ -522,6 +587,9 @@ async def _process_auth_request(
         return await call_next(request)
 
     if _authorize_signed_artifact_download(context=context, request=request):
+        trust_context_rejection = await _enforce_session_trust_context(context=context, request=request)
+        if trust_context_rejection is not None:
+            return trust_context_rejection
         return await call_next(request)
 
     signed_upload_authorized, signed_upload_rejection = await _evaluate_signed_upload_auth(
@@ -531,6 +599,9 @@ async def _process_auth_request(
         telemetry_server_id=telemetry_server_id,
     )
     if signed_upload_authorized:
+        trust_context_rejection = await _enforce_session_trust_context(context=context, request=request)
+        if trust_context_rejection is not None:
+            return trust_context_rejection
         return await call_next(request)
     if signed_upload_rejection is not None:
         return signed_upload_rejection
@@ -546,6 +617,9 @@ async def _process_auth_request(
             status_code=exc.status_code,
             detail=exc.detail,
         )
+    trust_context_rejection = await _enforce_session_trust_context(context=context, request=request)
+    if trust_context_rejection is not None:
+        return trust_context_rejection
     return await call_next(request)
 
 

@@ -193,6 +193,11 @@ def create_metric_instruments(*, meter) -> dict[str, Any]:
             unit="1",
             description="Session lifecycle transitions observed by adapter.",
         ),
+        "_tool_definition_drift_total": meter.create_counter(
+            "adapter_tool_definition_drift_total",
+            unit="1",
+            description="Tool-definition drift events detected for pinned sessions.",
+        ),
     }
 
 

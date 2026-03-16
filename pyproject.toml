@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "remote-mcp-adapter"
-version = "0.2.0"
+version = "0.3.0"
 description = "Provides stateful mediation for remote MCP servers, including upload staging and automatic exposure of tool-generated files as session-scoped MCP resources."
 readme = "README.md"
 requires-python = ">=3.12"
@@ -30,7 +30,7 @@ dev = [
     "pytest-asyncio>=0.24.0",
     "pytest-cov>=5.0.0",
     "pre-commit>=4.3.0",
-    "mkdocs>=1.6.1",
+    "mkdocs>=1.6.1,<2",
     "mkdocs-material>=9.7.4",
     "mkdocstrings-python>=2.0.3",
     "mkdocs-git-revision-date-localized-plugin>=1.5.1",

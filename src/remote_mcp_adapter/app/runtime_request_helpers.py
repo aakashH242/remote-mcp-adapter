@@ -12,6 +12,31 @@ from ..config import AdapterConfig
 from ..config.load import load_config
 
 
+def resolve_adapter_auth_header_name(config: AdapterConfig) -> str:
+    """Return the effective adapter auth header name.
+
+    Args:
+        config: Adapter configuration carrying auth settings.
+
+    Returns:
+        Normalized header name, falling back to the default header.
+    """
+    return config.core.auth.header_name.strip() or DEFAULT_ADAPTER_AUTH_HEADER
+
+
+def get_adapter_auth_token(request: Request, config: AdapterConfig) -> str | None:
+    """Return the adapter auth token sent with the request, if any.
+
+    Args:
+        request: Incoming FastAPI request.
+        config: Adapter configuration carrying auth settings.
+
+    Returns:
+        Raw token value from the configured auth header, or ``None``.
+    """
+    return request.headers.get(resolve_adapter_auth_header_name(config))
+
+
 def validate_adapter_auth(request: Request, config: AdapterConfig) -> None:
     """Validate adapter-level auth header when enabled.
 
@@ -25,8 +50,8 @@ def validate_adapter_auth(request: Request, config: AdapterConfig) -> None:
     auth_config = config.core.auth
     if not auth_config.enabled:
         return
-    header_name = auth_config.header_name.strip() or DEFAULT_ADAPTER_AUTH_HEADER
-    provided_token = request.headers.get(header_name)
+    header_name = resolve_adapter_auth_header_name(config)
+    provided_token = get_adapter_auth_token(request, config)
     expected_token = auth_config.token or ""
     if provided_token != expected_token:
         raise HTTPException(

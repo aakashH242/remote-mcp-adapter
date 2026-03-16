@@ -1,6 +1,6 @@
 # Deployment
 
-**What you'll learn here:** which deployment paths are available, what each one needs, which one to choose first, and the shortest path to getting the adapter running without building everything from source.
+Which deployment paths are available, what each one needs, and the shortest path to getting the adapter running without building from source.
 
 ---
 
@@ -119,13 +119,6 @@ Pick the deployment path you want to follow:
 	docker compose up -d
 	```
 
-	**What this gives you**
-
-	- a complete working local stack
-	- shared storage wired up already
-	- an easy way to inspect logs and restart services
-	- a good baseline for testing uploads and artifacts end-to-end
-
 	**When Compose is the right choice**
 
 	Choose Compose when:
@@ -188,14 +181,6 @@ Pick the deployment path you want to follow:
 	helm install remote-mcp-adapter ./charts/remote-mcp-adapter -f ./charts/remote-mcp-adapter/values.yaml
 	```
 
-	**What this gives you**
-
-	- a Kubernetes-native install and upgrade path
-	- adapter config mounted from a ConfigMap
-	- shared storage and persistence options
-	- support for sidecar-style or externally hosted upstreams
-	- a cleaner path toward production operations
-
 	**When Helm is the right choice**
 
 	Choose Helm when:
@@ -232,7 +217,7 @@ Think of the docs flow like this:
 - [Getting Started](getting-started.md) is for getting something running quickly, especially locally
 - this page is for choosing a deployment path
 - [Configuration](configuration.md) is for shaping the runtime behavior once you know how you want to run it
-- [Security](security.md) and [Telemetry](telemetry.md) are for hardening and operating it well
+- [Security](security/index.md) and [Telemetry](telemetry.md) are for hardening and operating it well
 
 ---
 

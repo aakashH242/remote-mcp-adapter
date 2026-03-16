@@ -1,6 +1,6 @@
 # Public Demo Downloads Scenario
 
-**What you'll learn here:** how to configure the adapter for a browser-facing or externally shared demo, why `public_base_url` and signed links matter together, and which settings make artifact links easy for humans to click without turning the whole service into an anonymous free-for-all.
+For browser-facing showcases. Signed URLs keep out the noise while `public_base_url` ensures artifact links are actually clickable by human viewers.
 
 ---
 
@@ -44,11 +44,7 @@ core:
   log_level: "info"
 ```
 
-Why:
-
-- `public_base_url` is non-negotiable here because returned upload and download links must point at the real public address
-- `allow_artifacts_download: true` enables HTTP artifact links in tool results
-- `log_level: "info"` makes demo issues easier to diagnose without living in debug logs
+`public_base_url` is non-negotiable here because returned upload and download links must point at the real public address. `allow_artifacts_download: true` enables HTTP artifact links in tool results. `log_level: "info"` makes demo issues easier to diagnose without living in debug logs.
 
 If you leave `public_base_url` unset in this kind of deployment, the adapter may generate links that point at an internal hostname, container IP, or some other address the audience cannot reach.
 
@@ -63,12 +59,7 @@ core:
     signing_secret: "${MCP_ADAPTER_SIGNING_SECRET}"
 ```
 
-Why:
-
-- `auth.enabled: true` keeps MCP and normal API access protected
-- signed upload URLs let demo clients upload files without exposing the main auth token in browser flows
-- when artifact download signing is active, returned `download_url` links can be clicked directly without manually attaching the adapter auth header
-- a separate `signing_secret` makes rotation and operational cleanup easier
+`auth.enabled: true` keeps MCP and normal API access protected. Signed upload URLs let demo clients upload files without exposing the main auth token in browser flows. When artifact download signing is active, returned `download_url` links can be clicked directly without manually attaching the adapter auth header. A separate `signing_secret` makes rotation and operational cleanup easier.
 
 This is one of the biggest advantages of the adapter for demo environments: the service can stay protected while the human-facing links stay usable.
 
@@ -87,11 +78,7 @@ core:
     allow_credentials: false
 ```
 
-Why:
-
-- browser-facing demos often need CORS even when ordinary agent integrations do not
-- it is safer to list the demo origin explicitly than to use `*`
-- this keeps the browser story intentional rather than accidental
+Browser-facing demos often need CORS even when ordinary agent integrations do not. It is safer to list the demo origin explicitly than to use `*`. This keeps the browser story intentional rather than accidental.
 
 ### Uploads and artifacts
 
@@ -109,12 +96,7 @@ artifacts:
   expose_as_resources: true
 ```
 
-Why:
-
-- demo users still need real uploads and artifact results
-- `require_sha256: true` is worth keeping in a public-facing environment
-- moderate TTLs strike a decent balance between convenience and cleanup
-- `max_per_session` keeps a popular demo from quietly filling the disk
+Demo users still need real uploads and artifact results. `require_sha256: true` is worth keeping in a public-facing environment. Moderate TTLs strike a decent balance between convenience and cleanup, and `max_per_session` keeps a popular demo from quietly filling the disk.
 
 ### Sessions and limits
 
@@ -125,11 +107,7 @@ sessions:
   max_total_session_size: "250Mi"
 ```
 
-Why:
-
-- public demos can attract bursty usage
-- finite limits matter more in an environment where you do not fully control user behavior
-- shorter idle TTLs help abandoned sessions disappear quickly
+Public demos can attract bursty usage. Finite limits matter more in an environment where you do not fully control user behavior. Shorter idle TTLs help abandoned sessions disappear quickly.
 
 ---
 
@@ -208,6 +186,6 @@ In other words, it feels polished without becoming reckless.
 
 - **Back to:** [Configuration](../configuration.md) — overview and scenario index.
 - **Previous scenario:** [Agent-Optimized Code Mode Scenario](agent-optimized-code-mode.md) — compact discovery surface for coding agents.
-- **See also:** [Security](../security.md) — how signed upload and download URLs behave.
+- **See also:** [Security](../security/index.md) — how signed upload and download URLs behave.
 - **See also:** [Detailed Reference](config-reference.md) — exact fields for `public_base_url`, auth signing, CORS, and artifact downloads.
 - **Next scenario:** [Private Demo Links Scenario](private-demo-links.md) — similar human-friendly links, but for a more controlled internal audience.

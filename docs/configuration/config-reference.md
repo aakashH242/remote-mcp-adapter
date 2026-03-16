@@ -139,6 +139,141 @@ HTTP server, logging, runtime behaviour
       <td>Maximum token budget used when core.shorten_descriptions=true or when a server override enables shortened descriptions.</td>
     </tr>
     <tr>
+      <td><code>tool_metadata_sanitization</code></td>
+      <td><code>object</code></td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      <td><code>servers[].tool_metadata_sanitization</code></td>
+      <td>Apply a conservative sanitization pass to model-visible tool metadata before it reaches the client.</td>
+    </tr>
+    <tr>
+      <td><code>tool_metadata_sanitization.mode</code></td>
+      <td><code>string</code></td>
+      <td>optional</td>
+      <td>&quot;sanitize&quot;</td>
+      <td>&quot;off&quot;, &quot;sanitize&quot;, &quot;block&quot;</td>
+      <td>-</td>
+      <td>core.tool_metadata_sanitization.mode</td>
+    </tr>
+    <tr>
+      <td><code>tool_metadata_sanitization.normalize_unicode</code></td>
+      <td><code>boolean</code></td>
+      <td>optional</td>
+      <td>true</td>
+      <td>-</td>
+      <td>-</td>
+      <td>Apply Unicode NFKC normalization to model-visible metadata text.</td>
+    </tr>
+    <tr>
+      <td><code>tool_metadata_sanitization.remove_invisible_characters</code></td>
+      <td><code>boolean</code></td>
+      <td>optional</td>
+      <td>true</td>
+      <td>-</td>
+      <td>-</td>
+      <td>Remove zero-width / invisible formatting characters from model-visible tool metadata text.</td>
+    </tr>
+    <tr>
+      <td><code>tool_metadata_sanitization.max_tool_title_chars</code></td>
+      <td><code>number</code></td>
+      <td>optional</td>
+      <td>256</td>
+      <td>&gt; 0 or null</td>
+      <td>-</td>
+      <td>Maximum forwarded length for tool titles.</td>
+    </tr>
+    <tr>
+      <td><code>tool_metadata_sanitization.max_tool_description_chars</code></td>
+      <td><code>number</code></td>
+      <td>optional</td>
+      <td>2000</td>
+      <td>&gt; 0 or null</td>
+      <td>-</td>
+      <td>Maximum forwarded length for top-level tool descriptions.</td>
+    </tr>
+    <tr>
+      <td><code>tool_metadata_sanitization.max_schema_text_chars</code></td>
+      <td><code>number</code></td>
+      <td>optional</td>
+      <td>1000</td>
+      <td>&gt; 0 or null</td>
+      <td>-</td>
+      <td>Maximum forwarded length for schema title/description text fields.</td>
+    </tr>
+    <tr>
+      <td><code>tool_description_policy</code></td>
+      <td><code>object</code></td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      <td><code>servers[].tool_description_policy</code></td>
+      <td>Control how much description prose from upstream tools should be forwarded to the client.</td>
+    </tr>
+    <tr>
+      <td><code>tool_description_policy.mode</code></td>
+      <td><code>string</code></td>
+      <td>optional</td>
+      <td>&quot;preserve&quot;</td>
+      <td>&quot;preserve&quot;, &quot;truncate&quot;, &quot;strip&quot;</td>
+      <td>-</td>
+      <td>core.tool_description_policy.mode</td>
+    </tr>
+    <tr>
+      <td><code>tool_description_policy.max_tool_description_chars</code></td>
+      <td><code>number</code></td>
+      <td>optional</td>
+      <td>280</td>
+      <td>&gt; 0 or null</td>
+      <td>-</td>
+      <td>Maximum forwarded length for top-level tool descriptions when mode=&quot;truncate&quot;.</td>
+    </tr>
+    <tr>
+      <td><code>tool_description_policy.max_schema_description_chars</code></td>
+      <td><code>number</code></td>
+      <td>optional</td>
+      <td>280</td>
+      <td>&gt; 0 or null</td>
+      <td>-</td>
+      <td>Maximum forwarded length for schema description fields when mode=&quot;truncate&quot;.</td>
+    </tr>
+    <tr>
+      <td><code>tool_definition_pinning</code></td>
+      <td><code>object</code></td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      <td><code>servers[].tool_definition_pinning.mode</code></td>
+      <td>Protect the client-visible tool catalog from mid-session definition drift.</td>
+    </tr>
+    <tr>
+      <td><code>tool_definition_pinning.mode</code></td>
+      <td><code>string</code></td>
+      <td>optional</td>
+      <td>&quot;warn&quot;</td>
+      <td>&quot;off&quot;, &quot;warn&quot;, &quot;block&quot;</td>
+      <td>-</td>
+      <td>How the adapter should react when a later tool catalog differs from the pinned baseline for the same session.</td>
+    </tr>
+    <tr>
+      <td><code>tool_definition_pinning.block_strategy</code></td>
+      <td><code>string</code></td>
+      <td>optional</td>
+      <td>&quot;error&quot;</td>
+      <td>&quot;error&quot;, &quot;baseline_subset&quot;</td>
+      <td>-</td>
+      <td>What &quot;block&quot; mode should do after drift is detected.</td>
+    </tr>
+    <tr>
+      <td><code>tool_definition_pinning.block_error_session_action</code></td>
+      <td><code>string</code></td>
+      <td>optional</td>
+      <td>&quot;invalidate&quot;</td>
+      <td>&quot;keep&quot;, &quot;invalidate&quot;</td>
+      <td>-</td>
+      <td>When block_strategy=&quot;error&quot;, decide whether the adapter should keep the current session alive or invalidate it immediately after drift is detected.</td>
+    </tr>
+    <tr>
       <td><code>upload_path</code></td>
       <td><code>string</code></td>
       <td>optional</td>
@@ -490,6 +625,159 @@ HTTP server, logging, runtime behaviour
       #
       # Optional. Default: 16. Allowed: > 0.
       short_description_max_tokens: 16
+    
+      # ---------------------------------------------------------------------------
+      # Tool metadata sanitization
+      # ---------------------------------------------------------------------------
+    
+      # Apply a conservative sanitization pass to model-visible tool metadata
+      # before it reaches the client. This affects tool title, description text and
+      # schema title, description fields that models can actually read.
+      #
+      # "off"      -> forward metadata as-is.
+      # "sanitize" -> normalize/sanitize the visible text fields and log when
+      #               changes were required.
+      # "block"    -> hide tools whose visible metadata would have required
+      #               sanitization instead of forwarding the modified version.
+      #
+      # Individual servers can override this with
+      # servers[].tool_metadata_sanitization.*.
+      tool_metadata_sanitization:
+        # Optional. Default: "sanitize".
+        # Allowed: "off", "sanitize", "block"
+        mode: "sanitize"
+    
+        # Apply Unicode NFKC normalization to model-visible metadata text.
+        #
+        # Optional. Default: true.
+        normalize_unicode: true
+    
+        # Remove zero-width / invisible formatting characters from model-visible
+        # tool metadata text.
+        #
+        # Optional. Default: true.
+        remove_invisible_characters: true
+    
+        # Maximum forwarded length for tool titles.
+        #
+        # Optional. Default: 256. Allowed: > 0 or null.
+        max_tool_title_chars: 256
+    
+        # Maximum forwarded length for top-level tool descriptions.
+        #
+        # Optional. Default: 2000. Allowed: > 0 or null.
+        max_tool_description_chars: 2000
+    
+        # Maximum forwarded length for schema title/description text fields.
+        #
+        # Optional. Default: 1000. Allowed: > 0 or null.
+        max_schema_text_chars: 1000
+    
+      # ---------------------------------------------------------------------------
+      # Tool description policy
+      # ---------------------------------------------------------------------------
+    
+      # Control how much description prose from upstream tools should be forwarded
+      # to the client. This applies to top-level tool descriptions and schema
+      # description fields across the whole visible tool catalog.
+      #
+      # The policy runs before Code Mode. If Code Mode is enabled, its discovery
+      # and execute tools inherit the same description surface instead of bypassing
+      # this policy.
+      #
+      # This is intentionally separate from tool_metadata_sanitization:
+      #
+      # - tool_metadata_sanitization cleans suspicious text
+      # - tool_description_policy decides how much description prose is forwarded
+      #
+      # "preserve" -> keep descriptions after earlier sanitization passes.
+      # "truncate" -> keep only the first N characters.
+      # "strip"    -> remove description text entirely.
+      #
+      # Individual servers can override this with
+      # servers[].tool_description_policy.*.
+      tool_description_policy:
+        # Optional. Default: "preserve".
+        # Allowed: "preserve", "truncate", "strip"
+        mode: "preserve"
+    
+        # Maximum forwarded length for top-level tool descriptions when
+        # mode="truncate".
+        #
+        # Optional. Default: 280. Allowed: > 0 or null.
+        max_tool_description_chars: 280
+    
+        # Maximum forwarded length for schema description fields when
+        # mode="truncate".
+        #
+        # Optional. Default: 280. Allowed: > 0 or null.
+        max_schema_description_chars: 280
+    
+      # ---------------------------------------------------------------------------
+      # Tool-definition pinning
+      # ---------------------------------------------------------------------------
+    
+      # Protect the client-visible tool catalog from mid-session definition drift.
+      # On the first catalog exposure for a given Mcp-Session-Id, the adapter pins
+      # the visible tool definitions for that session. Later changes from the
+      # upstream server are then detected and handled according to the selected
+      # policy.
+      #
+      # This is useful when you do not want a tool to look harmless during initial
+      # review and then quietly change description or schema mid-session.
+      #
+      # Legitimate upstream upgrades are still allowed, but they require a fresh
+      # adapter session (a new Mcp-Session-Id). The adapter does not auto-repin in
+      # the middle of an existing session.
+      #
+      # Individual servers can override this with
+      # servers[].tool_definition_pinning.mode and
+      # servers[].tool_definition_pinning.block_strategy and
+      # servers[].tool_definition_pinning.block_error_session_action.
+      tool_definition_pinning:
+        # How the adapter should react when a later tool catalog differs from the
+        # pinned baseline for the same session.
+        #
+        # "off"  -> do not pin or compare tool definitions.
+        # "warn" -> allow the new catalog, but annotate returned tool descriptions
+        #           with a session-wide warning and more specific warnings for
+        #           changed/new tools.
+        # "block" -> detect drift and then either return an MCP error or only the
+        #            still-trusted unchanged subset (see block_strategy below).
+        #
+        # Optional. Default: "warn".
+        # Allowed: "off", "warn", "block"
+        mode: "warn"
+    
+        # What "block" mode should do after drift is detected.
+        #
+        # "error" -> fail the catalog request and fail direct calls to drifted
+        #            tools with an explicit error.
+        # "baseline_subset" -> keep serving only unchanged pinned tools and hide
+        #                      changed/new/removed tools from that session.
+        #
+        # Optional. Default: "error".
+        # Allowed: "error", "baseline_subset"
+        block_strategy: "error"
+    
+        # When block_strategy="error", decide whether the adapter should keep the
+        # current session alive or invalidate it immediately after drift is
+        # detected.
+        #
+        # "keep" -> return the blocking error, but leave the session alive so the
+        #            client can keep receiving the same error until it reconnects.
+        # "invalidate" -> turn the session into a terminal tombstone immediately.
+        #                  Any later reuse of the same Mcp-Session-Id is rejected
+        #                  until the tombstone expires, which forces the client to
+        #                  start a fresh adapter session.
+        #
+        # "invalidate" is the safer default because it turns legitimate upstream
+        # upgrades into an explicit session-boundary event instead of leaving a
+        # half-trusted session around.
+        #
+        # Optional. Default: "invalidate".
+        # Allowed: "keep", "invalidate"
+        block_error_session_action: "invalidate"
     
       # ---------------------------------------------------------------------------
       # Upload endpoint path
@@ -2169,6 +2457,141 @@ upstream MCP server registrations  (REQUIRED, at least one entry). Each entry re
       <td>Maximum token budget for the first-sentence summary when shortened descriptions are enabled for this server.</td>
     </tr>
     <tr>
+      <td><code>[].tool_description_policy</code></td>
+      <td><code>object</code></td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      <td>per-server description-forwarding override</td>
+    </tr>
+    <tr>
+      <td><code>[].tool_description_policy.mode</code></td>
+      <td><code>null</code></td>
+      <td>optional</td>
+      <td>null</td>
+      <td>&quot;preserve&quot;, &quot;truncate&quot;, &quot;strip&quot;, or null</td>
+      <td>inherits <code>core.tool_description_policy.mode</code></td>
+      <td>Override how this server forwards tool and schema descriptions.</td>
+    </tr>
+    <tr>
+      <td><code>[].tool_description_policy.max_tool_description_chars</code></td>
+      <td><code>null</code></td>
+      <td>optional</td>
+      <td>null</td>
+      <td>&gt; 0 or null</td>
+      <td>inherits <code>core.tool_description_policy.max_tool_description_chars</code></td>
+      <td>Override the top-level tool description cap for this server.</td>
+    </tr>
+    <tr>
+      <td><code>[].tool_description_policy.max_schema_description_chars</code></td>
+      <td><code>null</code></td>
+      <td>optional</td>
+      <td>null</td>
+      <td>&gt; 0 or null</td>
+      <td>inherits <code>core.tool_description_policy.max_schema_description_chars</code></td>
+      <td>Override the schema description cap for this server.</td>
+    </tr>
+    <tr>
+      <td><code>[].tool_metadata_sanitization</code></td>
+      <td><code>object</code></td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      <td>per-server metadata-sanitization override</td>
+    </tr>
+    <tr>
+      <td><code>[].tool_metadata_sanitization.mode</code></td>
+      <td><code>null</code></td>
+      <td>optional</td>
+      <td>null</td>
+      <td>&quot;off&quot;, &quot;sanitize&quot;, &quot;block&quot;, or null</td>
+      <td>inherits <code>core.tool_metadata_sanitization.mode</code></td>
+      <td>Override how this server sanitizes model-visible tool metadata.</td>
+    </tr>
+    <tr>
+      <td><code>[].tool_metadata_sanitization.normalize_unicode</code></td>
+      <td><code>null</code></td>
+      <td>optional</td>
+      <td>null</td>
+      <td>-</td>
+      <td>inherits <code>core.tool_metadata_sanitization.normalize_unicode</code></td>
+      <td>Override Unicode normalization for this server.</td>
+    </tr>
+    <tr>
+      <td><code>[].tool_metadata_sanitization.remove_invisible_characters</code></td>
+      <td><code>null</code></td>
+      <td>optional</td>
+      <td>null</td>
+      <td>-</td>
+      <td>inherits <code>core.tool_metadata_sanitization.remove_invisible_characters</code></td>
+      <td>Override invisible-character removal for this server.</td>
+    </tr>
+    <tr>
+      <td><code>[].tool_metadata_sanitization.max_tool_title_chars</code></td>
+      <td><code>null</code></td>
+      <td>optional</td>
+      <td>null</td>
+      <td>&gt; 0 or null</td>
+      <td>inherits <code>core.tool_metadata_sanitization.max_tool_title_chars</code></td>
+      <td>Override the tool title length cap for this server.</td>
+    </tr>
+    <tr>
+      <td><code>[].tool_metadata_sanitization.max_tool_description_chars</code></td>
+      <td><code>null</code></td>
+      <td>optional</td>
+      <td>null</td>
+      <td>&gt; 0 or null</td>
+      <td>inherits <code>core.tool_metadata_sanitization.max_tool_description_chars</code></td>
+      <td>Override the tool description length cap for this server.</td>
+    </tr>
+    <tr>
+      <td><code>[].tool_metadata_sanitization.max_schema_text_chars</code></td>
+      <td><code>null</code></td>
+      <td>optional</td>
+      <td>null</td>
+      <td>&gt; 0 or null</td>
+      <td>inherits <code>core.tool_metadata_sanitization.max_schema_text_chars</code></td>
+      <td>Override the schema text length cap for this server.</td>
+    </tr>
+    <tr>
+      <td><code>[].tool_definition_pinning</code></td>
+      <td><code>object</code></td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      <td>per-server trust-policy override</td>
+    </tr>
+    <tr>
+      <td><code>[].tool_definition_pinning.mode</code></td>
+      <td><code>null</code></td>
+      <td>optional</td>
+      <td>null</td>
+      <td>&quot;off&quot;, &quot;warn&quot;, &quot;block&quot;, or null</td>
+      <td>inherits <code>core.tool_definition_pinning.mode</code></td>
+      <td>Override whether this server pins tool definitions for each adapter session.</td>
+    </tr>
+    <tr>
+      <td><code>[].tool_definition_pinning.block_strategy</code></td>
+      <td><code>null</code></td>
+      <td>optional</td>
+      <td>null</td>
+      <td>&quot;error&quot;, &quot;baseline_subset&quot;, or null</td>
+      <td>inherits <code>core.tool_definition_pinning.block_strategy</code></td>
+      <td>Override how block mode behaves for this server.</td>
+    </tr>
+    <tr>
+      <td><code>[].tool_definition_pinning.block_error_session_action</code></td>
+      <td><code>null</code></td>
+      <td>optional</td>
+      <td>null</td>
+      <td>&quot;keep&quot;, &quot;invalidate&quot;, or null</td>
+      <td>inherits <code>core.tool_definition_pinning.block_error_session_action</code></td>
+      <td>Override what block_strategy=&quot;error&quot; should do for this server.</td>
+    </tr>
+    <tr>
       <td><code>[].disabled_tools</code></td>
       <td><code>array</code></td>
       <td>optional</td>
@@ -2564,6 +2987,108 @@ upstream MCP server registrations  (REQUIRED, at least one entry). Each entry re
         #
         # Optional. Default: null. Allowed: > 0 or null.
         short_description_max_tokens: null
+    
+        # -------------------------------------------------------------------------
+        # tool_description_policy -- per-server description-forwarding override
+        # -------------------------------------------------------------------------
+        tool_description_policy:
+          # Override how this server forwards tool and schema descriptions.
+          #
+          # null inherits core.tool_description_policy.mode.
+          #
+          # Optional. Default: null.
+          # Allowed: "preserve", "truncate", "strip", or null.
+          mode: null
+    
+          # Override the top-level tool description cap for this server.
+          #
+          # null inherits core.tool_description_policy.max_tool_description_chars.
+          #
+          # Optional. Default: null. Allowed: > 0 or null.
+          max_tool_description_chars: null
+    
+          # Override the schema description cap for this server.
+          #
+          # null inherits core.tool_description_policy.max_schema_description_chars.
+          #
+          # Optional. Default: null. Allowed: > 0 or null.
+          max_schema_description_chars: null
+    
+        # -------------------------------------------------------------------------
+        # tool_metadata_sanitization -- per-server metadata-sanitization override
+        # -------------------------------------------------------------------------
+        tool_metadata_sanitization:
+          # Override how this server sanitizes model-visible tool metadata.
+          #
+          # null inherits core.tool_metadata_sanitization.mode.
+          #
+          # Optional. Default: null.
+          # Allowed: "off", "sanitize", "block", or null.
+          mode: null
+    
+          # Override Unicode normalization for this server.
+          #
+          # null inherits core.tool_metadata_sanitization.normalize_unicode.
+          #
+          # Optional. Default: null.
+          normalize_unicode: null
+    
+          # Override invisible-character removal for this server.
+          #
+          # null inherits core.tool_metadata_sanitization.remove_invisible_characters.
+          #
+          # Optional. Default: null.
+          remove_invisible_characters: null
+    
+          # Override the tool title length cap for this server.
+          #
+          # null inherits core.tool_metadata_sanitization.max_tool_title_chars.
+          #
+          # Optional. Default: null. Allowed: > 0 or null.
+          max_tool_title_chars: null
+    
+          # Override the tool description length cap for this server.
+          #
+          # null inherits core.tool_metadata_sanitization.max_tool_description_chars.
+          #
+          # Optional. Default: null. Allowed: > 0 or null.
+          max_tool_description_chars: null
+    
+          # Override the schema text length cap for this server.
+          #
+          # null inherits core.tool_metadata_sanitization.max_schema_text_chars.
+          #
+          # Optional. Default: null. Allowed: > 0 or null.
+          max_schema_text_chars: null
+    
+        # -------------------------------------------------------------------------
+        # tool_definition_pinning -- per-server trust-policy override
+        # -------------------------------------------------------------------------
+        tool_definition_pinning:
+          # Override whether this server pins tool definitions for each adapter
+          # session.
+          #
+          # null inherits core.tool_definition_pinning.mode.
+          #
+          # Optional. Default: null.
+          # Allowed: "off", "warn", "block", or null.
+          mode: null
+    
+          # Override how block mode behaves for this server.
+          #
+          # null inherits core.tool_definition_pinning.block_strategy.
+          #
+          # Optional. Default: null.
+          # Allowed: "error", "baseline_subset", or null.
+          block_strategy: null
+    
+          # Override what block_strategy="error" should do for this server.
+          #
+          # null inherits core.tool_definition_pinning.block_error_session_action.
+          #
+          # Optional. Default: null.
+          # Allowed: "keep", "invalidate", or null.
+          block_error_session_action: null
     
         # -------------------------------------------------------------------------
         # disabled_tools -- tool-level suppression list
@@ -2985,6 +3510,159 @@ The exact commented YAML template is still included here for copy-paste use and 
       #
       # Optional. Default: 16. Allowed: > 0.
       short_description_max_tokens: 16
+    
+      # ---------------------------------------------------------------------------
+      # Tool metadata sanitization
+      # ---------------------------------------------------------------------------
+    
+      # Apply a conservative sanitization pass to model-visible tool metadata
+      # before it reaches the client. This affects tool title, description text and
+      # schema title, description fields that models can actually read.
+      #
+      # "off"      -> forward metadata as-is.
+      # "sanitize" -> normalize/sanitize the visible text fields and log when
+      #               changes were required.
+      # "block"    -> hide tools whose visible metadata would have required
+      #               sanitization instead of forwarding the modified version.
+      #
+      # Individual servers can override this with
+      # servers[].tool_metadata_sanitization.*.
+      tool_metadata_sanitization:
+        # Optional. Default: "sanitize".
+        # Allowed: "off", "sanitize", "block"
+        mode: "sanitize"
+    
+        # Apply Unicode NFKC normalization to model-visible metadata text.
+        #
+        # Optional. Default: true.
+        normalize_unicode: true
+    
+        # Remove zero-width / invisible formatting characters from model-visible
+        # tool metadata text.
+        #
+        # Optional. Default: true.
+        remove_invisible_characters: true
+    
+        # Maximum forwarded length for tool titles.
+        #
+        # Optional. Default: 256. Allowed: > 0 or null.
+        max_tool_title_chars: 256
+    
+        # Maximum forwarded length for top-level tool descriptions.
+        #
+        # Optional. Default: 2000. Allowed: > 0 or null.
+        max_tool_description_chars: 2000
+    
+        # Maximum forwarded length for schema title/description text fields.
+        #
+        # Optional. Default: 1000. Allowed: > 0 or null.
+        max_schema_text_chars: 1000
+    
+      # ---------------------------------------------------------------------------
+      # Tool description policy
+      # ---------------------------------------------------------------------------
+    
+      # Control how much description prose from upstream tools should be forwarded
+      # to the client. This applies to top-level tool descriptions and schema
+      # description fields across the whole visible tool catalog.
+      #
+      # The policy runs before Code Mode. If Code Mode is enabled, its discovery
+      # and execute tools inherit the same description surface instead of bypassing
+      # this policy.
+      #
+      # This is intentionally separate from tool_metadata_sanitization:
+      #
+      # - tool_metadata_sanitization cleans suspicious text
+      # - tool_description_policy decides how much description prose is forwarded
+      #
+      # "preserve" -> keep descriptions after earlier sanitization passes.
+      # "truncate" -> keep only the first N characters.
+      # "strip"    -> remove description text entirely.
+      #
+      # Individual servers can override this with
+      # servers[].tool_description_policy.*.
+      tool_description_policy:
+        # Optional. Default: "preserve".
+        # Allowed: "preserve", "truncate", "strip"
+        mode: "preserve"
+    
+        # Maximum forwarded length for top-level tool descriptions when
+        # mode="truncate".
+        #
+        # Optional. Default: 280. Allowed: > 0 or null.
+        max_tool_description_chars: 280
+    
+        # Maximum forwarded length for schema description fields when
+        # mode="truncate".
+        #
+        # Optional. Default: 280. Allowed: > 0 or null.
+        max_schema_description_chars: 280
+    
+      # ---------------------------------------------------------------------------
+      # Tool-definition pinning
+      # ---------------------------------------------------------------------------
+    
+      # Protect the client-visible tool catalog from mid-session definition drift.
+      # On the first catalog exposure for a given Mcp-Session-Id, the adapter pins
+      # the visible tool definitions for that session. Later changes from the
+      # upstream server are then detected and handled according to the selected
+      # policy.
+      #
+      # This is useful when you do not want a tool to look harmless during initial
+      # review and then quietly change description or schema mid-session.
+      #
+      # Legitimate upstream upgrades are still allowed, but they require a fresh
+      # adapter session (a new Mcp-Session-Id). The adapter does not auto-repin in
+      # the middle of an existing session.
+      #
+      # Individual servers can override this with
+      # servers[].tool_definition_pinning.mode and
+      # servers[].tool_definition_pinning.block_strategy and
+      # servers[].tool_definition_pinning.block_error_session_action.
+      tool_definition_pinning:
+        # How the adapter should react when a later tool catalog differs from the
+        # pinned baseline for the same session.
+        #
+        # "off"  -> do not pin or compare tool definitions.
+        # "warn" -> allow the new catalog, but annotate returned tool descriptions
+        #           with a session-wide warning and more specific warnings for
+        #           changed/new tools.
+        # "block" -> detect drift and then either return an MCP error or only the
+        #            still-trusted unchanged subset (see block_strategy below).
+        #
+        # Optional. Default: "warn".
+        # Allowed: "off", "warn", "block"
+        mode: "warn"
+    
+        # What "block" mode should do after drift is detected.
+        #
+        # "error" -> fail the catalog request and fail direct calls to drifted
+        #            tools with an explicit error.
+        # "baseline_subset" -> keep serving only unchanged pinned tools and hide
+        #                      changed/new/removed tools from that session.
+        #
+        # Optional. Default: "error".
+        # Allowed: "error", "baseline_subset"
+        block_strategy: "error"
+    
+        # When block_strategy="error", decide whether the adapter should keep the
+        # current session alive or invalidate it immediately after drift is
+        # detected.
+        #
+        # "keep" -> return the blocking error, but leave the session alive so the
+        #            client can keep receiving the same error until it reconnects.
+        # "invalidate" -> turn the session into a terminal tombstone immediately.
+        #                  Any later reuse of the same Mcp-Session-Id is rejected
+        #                  until the tombstone expires, which forces the client to
+        #                  start a fresh adapter session.
+        #
+        # "invalidate" is the safer default because it turns legitimate upstream
+        # upgrades into an explicit session-boundary event instead of leaving a
+        # half-trusted session around.
+        #
+        # Optional. Default: "invalidate".
+        # Allowed: "keep", "invalidate"
+        block_error_session_action: "invalidate"
     
       # ---------------------------------------------------------------------------
       # Upload endpoint path
@@ -3890,6 +4568,108 @@ The exact commented YAML template is still included here for copy-paste use and 
         #
         # Optional. Default: null. Allowed: > 0 or null.
         short_description_max_tokens: null
+    
+        # -------------------------------------------------------------------------
+        # tool_description_policy -- per-server description-forwarding override
+        # -------------------------------------------------------------------------
+        tool_description_policy:
+          # Override how this server forwards tool and schema descriptions.
+          #
+          # null inherits core.tool_description_policy.mode.
+          #
+          # Optional. Default: null.
+          # Allowed: "preserve", "truncate", "strip", or null.
+          mode: null
+    
+          # Override the top-level tool description cap for this server.
+          #
+          # null inherits core.tool_description_policy.max_tool_description_chars.
+          #
+          # Optional. Default: null. Allowed: > 0 or null.
+          max_tool_description_chars: null
+    
+          # Override the schema description cap for this server.
+          #
+          # null inherits core.tool_description_policy.max_schema_description_chars.
+          #
+          # Optional. Default: null. Allowed: > 0 or null.
+          max_schema_description_chars: null
+    
+        # -------------------------------------------------------------------------
+        # tool_metadata_sanitization -- per-server metadata-sanitization override
+        # -------------------------------------------------------------------------
+        tool_metadata_sanitization:
+          # Override how this server sanitizes model-visible tool metadata.
+          #
+          # null inherits core.tool_metadata_sanitization.mode.
+          #
+          # Optional. Default: null.
+          # Allowed: "off", "sanitize", "block", or null.
+          mode: null
+    
+          # Override Unicode normalization for this server.
+          #
+          # null inherits core.tool_metadata_sanitization.normalize_unicode.
+          #
+          # Optional. Default: null.
+          normalize_unicode: null
+    
+          # Override invisible-character removal for this server.
+          #
+          # null inherits core.tool_metadata_sanitization.remove_invisible_characters.
+          #
+          # Optional. Default: null.
+          remove_invisible_characters: null
+    
+          # Override the tool title length cap for this server.
+          #
+          # null inherits core.tool_metadata_sanitization.max_tool_title_chars.
+          #
+          # Optional. Default: null. Allowed: > 0 or null.
+          max_tool_title_chars: null
+    
+          # Override the tool description length cap for this server.
+          #
+          # null inherits core.tool_metadata_sanitization.max_tool_description_chars.
+          #
+          # Optional. Default: null. Allowed: > 0 or null.
+          max_tool_description_chars: null
+    
+          # Override the schema text length cap for this server.
+          #
+          # null inherits core.tool_metadata_sanitization.max_schema_text_chars.
+          #
+          # Optional. Default: null. Allowed: > 0 or null.
+          max_schema_text_chars: null
+    
+        # -------------------------------------------------------------------------
+        # tool_definition_pinning -- per-server trust-policy override
+        # -------------------------------------------------------------------------
+        tool_definition_pinning:
+          # Override whether this server pins tool definitions for each adapter
+          # session.
+          #
+          # null inherits core.tool_definition_pinning.mode.
+          #
+          # Optional. Default: null.
+          # Allowed: "off", "warn", "block", or null.
+          mode: null
+    
+          # Override how block mode behaves for this server.
+          #
+          # null inherits core.tool_definition_pinning.block_strategy.
+          #
+          # Optional. Default: null.
+          # Allowed: "error", "baseline_subset", or null.
+          block_strategy: null
+    
+          # Override what block_strategy="error" should do for this server.
+          #
+          # null inherits core.tool_definition_pinning.block_error_session_action.
+          #
+          # Optional. Default: null.
+          # Allowed: "keep", "invalidate", or null.
+          block_error_session_action: null
     
         # -------------------------------------------------------------------------
         # disabled_tools -- tool-level suppression list

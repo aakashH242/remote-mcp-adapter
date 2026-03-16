@@ -5,7 +5,13 @@ from dataclasses import dataclass
 import pytest
 
 from remote_mcp_adapter.core.persistence.redis_support import build_keyspace
-from remote_mcp_adapter.core.repo.records import SessionState, SessionTombstone
+from remote_mcp_adapter.core.repo.records import (
+	SessionState,
+	SessionTombstone,
+	ToolDefinitionBaseline,
+	ToolDefinitionDriftSummary,
+	ToolDefinitionSnapshot,
+)
 from remote_mcp_adapter.core.repo.redis_state_repository import (
 	_CAS_UPSERT_SCRIPT,
 	RedisStateRepository,
@@ -17,6 +23,7 @@ from remote_mcp_adapter.core.repo.state_codec import (
 	session_state_to_payload,
 	tombstone_to_payload,
 )
+from remote_mcp_adapter.session_integrity.models import SessionTrustContext
 
 
 @dataclass
@@ -82,7 +89,29 @@ class _FakeRedis:
 
 
 def _session_state(session_id: str = "sess") -> SessionState:
-	return SessionState(server_id="server", session_id=session_id, created_at=1.0, last_accessed=2.0)
+	state = SessionState(server_id="server", session_id=session_id, created_at=1.0, last_accessed=2.0)
+	state.trust_context = SessionTrustContext(
+		binding_kind="adapter_auth_token",
+		fingerprint="f" * 64,
+	)
+	state.tool_definition_baseline = ToolDefinitionBaseline(
+		established_at=3.0,
+		tools={
+			"tool_a": ToolDefinitionSnapshot(
+				name="tool_a",
+				canonical_hash="hash-a",
+				payload={"name": "tool_a"},
+			)
+		},
+	)
+	state.tool_definition_drift_summary = ToolDefinitionDriftSummary(
+		detected_at=4.0,
+		mode="warn",
+		block_strategy="error",
+		changed_tools=["tool_a"],
+		preview="changed=tool_a[description]",
+	)
+	return state
 
 
 def _tombstone(session_id: str = "sess") -> SessionTombstone:
@@ -147,6 +176,10 @@ async def test_hydrate_cache_drops_invalid_entries_and_exposes_loaded_state() ->
 
 	assert loaded_state is not None
 	assert loaded_state.session_id == "sess"
+	assert loaded_state.trust_context is not None
+	assert loaded_state.trust_context.binding_kind == "adapter_auth_token"
+	assert loaded_state.tool_definition_baseline is not None
+	assert loaded_state.tool_definition_baseline.tools["tool_a"].canonical_hash == "hash-a"
 	assert loaded_tombstone is not None
 	assert loaded_tombstone.state.session_id == "grave"
 	assert await repository.session_count() == 1

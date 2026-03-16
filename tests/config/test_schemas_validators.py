@@ -60,6 +60,9 @@ def test_core_config_validators():
     assert cfg.upload_path == "/uploads"
     assert cfg.log_level == "info"
     assert cfg.short_description_max_tokens == 12
+    assert cfg.tool_metadata_sanitization.mode == "sanitize"
+    assert cfg.tool_definition_pinning.mode == "warn"
+    assert cfg.tool_definition_pinning.block_error_session_action == "invalidate"
     with pytest.raises(ValueError, match="core.log_level must be one of"):
         CoreConfig(log_level="verbose")
     with pytest.raises(ValueError, match=r"core\.upload_path cannot be '/'"):
@@ -186,6 +189,8 @@ def test_upstream_and_server_and_adapter_validators():
     assert server_with_disabled.disabled_tools == ["exact_tool", "^prefix_.*"]
     assert server_with_disabled.shorten_descriptions is True
     assert server_with_disabled.short_description_max_tokens == 9
+    assert server_with_disabled.tool_definition_pinning.mode is None
+    assert server_with_disabled.tool_definition_pinning.block_error_session_action is None
 
     with pytest.raises(ValueError, match=r"servers\[\]\.id is required"):
         ServerConfig(id="  ", mount_path="/m", upstream=UpstreamConfig(url="http://x"))

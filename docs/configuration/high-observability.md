@@ -1,6 +1,6 @@
 # High-Observability Scenario
 
-**What you'll learn here:** which telemetry and operational visibility settings matter once the adapter becomes a real service, what signals are worth turning on first, and how to improve debugging and incident response without changing the core MCP behavior.
+An operational overlay for when you need to understand what the adapter is doing in production, not just whether it is up.
 
 ---
 
@@ -35,7 +35,7 @@ A typical high-observability setup assumes:
 - production debugging speed matters
 - some additional operational complexity is acceptable in exchange for better visibility
 
-If you expect to answer questions like “Why are uploads failing?”, “Why is this upstream degrading?”, or “Why is storage pressure climbing?”, this is the right scenario.
+If you expect to answer questions like "Why are uploads failing?", "Why is this upstream degrading?", or "Why is storage pressure climbing?", this is the right scenario.
 
 ---
 
@@ -53,11 +53,7 @@ core:
   upstream_metadata_cache_ttl_seconds: 60
 ```
 
-Why:
-
-- `log_level: "info"` gives operators more useful runtime signals than quieter defaults
-- startup and cleanup timings become easier to reason about when they are explicitly set
-- a shorter metadata cache TTL can make upstream changes visible faster during operations and debugging
+`log_level: "info"` gives operators more useful runtime signals than quieter defaults. Startup and cleanup timings become easier to reason about when they are explicitly set. A shorter metadata cache TTL can make upstream changes visible faster during operations and debugging.
 
 This profile is not about noisy debugging logs all the time. It is about having enough signal to operate the service confidently.
 
@@ -82,12 +78,7 @@ telemetry:
   drop_on_queue_full: true
 ```
 
-Why:
-
-- `enabled: true` is the core switch that turns observability from optional to real
-- `service_name` and `service_namespace` make environments easier to separate in observability backends
-- explicit export cadence and queue sizing make telemetry behavior predictable under load
-- `flush_on_shutdown: true` improves signal preservation during restarts and rollouts
+`enabled: true` is the core switch that turns observability from optional to real. `service_name` and `service_namespace` make environments easier to separate in observability backends. Explicit export cadence and queue sizing make telemetry behavior predictable under load. `flush_on_shutdown: true` improves signal preservation during restarts and rollouts.
 
 If your collector requires headers, add them explicitly:
 
@@ -107,11 +98,7 @@ telemetry:
   drop_on_queue_full: true
 ```
 
-Why:
-
-- in production, blocking core request handling because the telemetry pipeline is slow is usually the wrong tradeoff
-- dropping excess telemetry under sustained pressure is often preferable to coupling service latency to exporter latency
-- batch sizing and flush cadence let you tune exporter pressure without relying on unsupported worker-count knobs
+In production, blocking core request handling because the telemetry pipeline is slow is usually the wrong tradeoff. Dropping excess telemetry under sustained pressure is often preferable to coupling service latency to exporter latency. Batch sizing and flush cadence let you tune exporter pressure without relying on unsupported worker-count knobs.
 
 ### Health and upstream behavior
 
@@ -127,11 +114,7 @@ core:
     half_open_probe_allowance: 3
 ```
 
-Why:
-
-- upstream visibility matters more once multiple dependencies are involved
-- explicit ping and cooldown settings make degraded behavior easier to interpret from metrics and logs
-- operators need to understand whether an upstream is down, flapping, or recovering
+Upstream visibility matters more once multiple dependencies are involved. Explicit ping and cooldown settings make degraded behavior easier to interpret from metrics and logs. Operators need to understand whether an upstream is down, flapping, or recovering.
 
 ### State persistence and topology
 
@@ -150,20 +133,11 @@ core:
     enabled: true
 ```
 
-Why:
-
-- observability is not a replacement for auth
-- production services that are important enough to monitor are usually also important enough to protect
+Observability is not a replacement for auth. Production services that are important enough to monitor are usually also important enough to protect.
 
 ### Storage and limits
 
-This overlay should usually be paired with explicit limits from either the durable or restricted-limits profiles.
-
-Why:
-
-- observability tells you when pressure is rising
-- limits tell the system what to do before pressure becomes catastrophic
-- both together are much more useful than either one alone
+This overlay should usually be paired with explicit limits from either the durable or restricted-limits profiles. Observability tells you when pressure is rising — limits tell the system what to do before pressure becomes catastrophic. Both together are much more useful than either one alone.
 
 ---
 

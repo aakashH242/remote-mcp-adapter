@@ -68,6 +68,12 @@ async def test_start_shutdown_and_enqueue_paths(monkeypatch):
     await telemetry.record_adapter_wiring_run(result="ok", total_servers=-1, not_ready_servers=-2)
     await telemetry.record_cleanup_cycle(result={"a": 2}, status="ok")
     await telemetry.record_session_lifecycle(event="created", server_id="s1")
+    await telemetry.record_tool_definition_drift(
+        server_id="s1",
+        mode="warn",
+        block_strategy="error",
+        outcome="warn",
+    )
     await telemetry.set_circuit_breaker_state(server_id="s1", state="open")
 
     await telemetry.shutdown()

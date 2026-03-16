@@ -1,6 +1,6 @@
 # Passthrough-Only Gateway Scenario
 
-**What you'll learn here:** when to run the adapter as a pure relay, which settings still matter even when you use no adapters, and why this profile is useful for teams that want auth, routing, health checks, and circuit-breaker behavior without file-handling features.
+Auth, routing, health checks, and circuit-breaker protection in front of one or more upstreams — without any upload or artifact mediation. The pure relay shape.
 
 ---
 
@@ -16,7 +16,7 @@ Typical examples:
 - deployments that mainly need health checks, routing, and failure isolation
 - a first rollout where you want to standardize access before you introduce adapter-wrapped tools
 
-If your main goal is “put one clean relay in front of multiple MCP servers,” this is the right place to start.
+If your main goal is "put one clean relay in front of multiple MCP servers," this is the right place to start.
 
 ---
 
@@ -51,12 +51,7 @@ core:
   code_mode_enabled: false
 ```
 
-Why:
-
-- `public_base_url` is still worth setting once clients use a real hostname, even if you are not relying on upload helpers right away.
-- `allow_artifacts_download: false` keeps the surface area smaller because this profile is not about download links.
-- `code_mode_enabled: false` keeps the normal tool list visible while teams get used to the gateway.
-- `log_level: "info"` is a good operating default for a shared relay.
+`public_base_url` is still worth setting once clients use a real hostname, even if you are not relying on upload helpers right away. `allow_artifacts_download: false` keeps the surface area smaller because this profile is not about download links. `code_mode_enabled: false` keeps the normal tool list visible while teams get used to the gateway. `log_level: "info"` is a good operating default for a shared relay.
 
 ### Auth
 
@@ -67,11 +62,7 @@ core:
     token: "${MCP_ADAPTER_TOKEN}"
 ```
 
-Why:
-
-- centralized auth is one of the main reasons to use this profile
-- it gives clients one consistent header and token model even if upstreams differ internally
-- it keeps the relay useful even when the upstreams are otherwise simple
+Centralized auth is one of the main reasons to use this profile. It gives clients one consistent header and token model even if upstreams differ internally, and it keeps the relay useful even when the upstreams are otherwise simple.
 
 ### Upstream health and circuit breaker
 
@@ -86,11 +77,7 @@ core:
     half_open_probe_allowance: 2
 ```
 
-Why:
-
-- this is another major reason to keep the adapter in front of upstreams
-- unhealthy upstreams fail fast instead of hanging every caller
-- recovery behavior becomes visible and predictable
+This is another major reason to keep the adapter in front of upstreams. Unhealthy upstreams fail fast instead of hanging every caller, and recovery behavior becomes visible and predictable.
 
 ### Uploads and artifacts
 
@@ -102,11 +89,7 @@ artifacts:
   enabled: false
 ```
 
-Why:
-
-- this makes the intent obvious: you are not trying to use file mediation at all
-- clients will not see upload-helper behavior that nobody plans to use
-- it reduces confusion for teams that only want a gateway layer
+This makes the intent obvious: you are not trying to use file mediation at all. Clients will not see upload-helper behavior that nobody plans to use, which reduces confusion for teams that only want a gateway layer.
 
 ### Storage and persistence
 
@@ -120,11 +103,7 @@ storage:
   root: "/tmp/remote-mcp-adapter"
 ```
 
-Why:
-
-- without upload and artifact handling, the storage and persistence pressure is much lower
-- `memory` is often enough if you do not need durable session recovery
-- you can tighten this later if the relay becomes more important operationally
+Without upload and artifact handling, the storage and persistence pressure is much lower. `memory` is often enough if you do not need durable session recovery, and you can tighten this later if the relay becomes more important operationally.
 
 If the gateway becomes shared or long-lived, moving to `disk` persistence is still reasonable.
 
@@ -147,11 +126,7 @@ servers:
       url: "http://fetch.internal:8080/mcp"
 ```
 
-Why:
-
-- every upstream tool remains passthrough
-- the adapter still provides a stable mount path per upstream
-- teams get one place for auth, health, and operational policy without changing tool behavior
+Every upstream tool remains passthrough. The adapter still provides a stable mount path per upstream, giving teams one place for auth, health, and operational policy without changing tool behavior.
 
 ---
 

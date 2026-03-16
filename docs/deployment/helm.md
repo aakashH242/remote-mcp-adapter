@@ -1,6 +1,6 @@
-﻿# Deploy with Helm
+# Deploy with Helm
 
-**What you'll learn here:** which Kubernetes deployment shapes the chart supports, which one fits your environment, what values to set for each scenario, and the exact `helm repo add`, `helm repo update`, and `helm upgrade --install` flow to use.
+How to install the adapter on Kubernetes using the published Helm chart, which deployment shape to choose, and what the commands actually look like.
 
 ---
 
@@ -34,7 +34,7 @@ Before you install the chart, make sure you have:
 - a values-file strategy
 - storage planned correctly for your chosen shape
 
-Redis is **not** a universal prerequisite for every Helm scenario. The durable standalone and simple distributed examples in this guide use disk-backed state. Redis becomes the real prerequisite once you want multiple adapter replicas sharing session metadata, as in the HA adapter tier.
+Redis is **not** a universal prerequisite for every Helm scenario. The durable standalone and simple distributed examples in this guide use disk-backed state. Redis becomes a real prerequisite once you want multiple adapter replicas sharing session metadata — specifically the HA adapter tier shape.
 
 If users will call `<server_id>_get_upload_url(...)` or open HTTP artifact download links through ingress, plan `core.public_base_url` up front. In Kubernetes that usually means the public hostname exposed by your ingress or load balancer. Without it, helper-generated URLs can point at an internal service or pod address instead of the address your client actually reaches.
 
@@ -54,7 +54,7 @@ The chart has two core topology knobs:
 
 But that is only the start. In practice, most teams choose a **Kubernetes operating shape**, not just a raw mode flag.
 
-The scenarios below are the ones that tend to matter in the real world:
+The scenarios that tend to matter in the real world:
 
 1. standalone quick start
 2. standalone durable service
@@ -65,7 +65,7 @@ The scenarios below are the ones that tend to matter in the real world:
 
 These are deployment shapes, not replacements for the runtime config scenarios in [Configuration](../configuration.md). The goal here is to show the Helm values you would actually apply in Kubernetes.
 
-There is one important distinction before you pick a page:
+One important distinction before you pick:
 
 - **Base shapes** are complete starting points you can install directly.
 - **Overlays** are additive values files you usually layer on top of a base shape with multiple `-f` flags.
@@ -79,7 +79,7 @@ In this section:
 
 ## Helm deployment scenarios
 
-Each deployment shape now has its own dedicated reference page, so you can jump straight to the one that matches your cluster without wading through every other pattern first.
+Each deployment shape has its own dedicated page so you can jump straight to the one that matches your cluster without wading through every other pattern first.
 
 - [Standalone Quick Start](helm/standalone-quickstart.md) — the simplest one-release Kubernetes entry point.
 - [Standalone Durable Service](helm/standalone-durable.md) — standalone, but with ingress, persistence, and stronger defaults.
@@ -88,14 +88,14 @@ Each deployment shape now has its own dedicated reference page, so you can jump 
 - [Browser-Facing Ingress](helm/browser-facing-ingress.md) — overlay values for human-clickable links and browser-facing flows.
 - [Observability-First Production](helm/observability-first-production.md) — overlay values for telemetry-heavy operated environments.
 
-The pattern is the same on each page:
+Each page follows the same pattern:
 
 - what the shape is for
 - a realistic `values.yaml` example
 - the commands to run with `helm repo add`, `helm repo update`, and `helm upgrade --install`
 - links to the matching runtime-config guidance when you need more than chart values
 
-If you want the cleanest reading order, use this:
+For the cleanest reading experience:
 
 1. [Choose a Shape](helm/choose-a-shape.md)
 2. one base shape page
@@ -104,7 +104,7 @@ If you want the cleanest reading order, use this:
 5. [Layered values-file pairs](helm/layered-values-file-pairs.md)
 6. [Post-Install Verification](helm/post-install-verification.md)
 
-If you are unsure where to start, use this shortcut:
+Not sure where to start? Use this shortcut:
 
 - choose [Standalone Quick Start](helm/standalone-quickstart.md) if you want the easiest cluster trial
 - choose [Standalone Durable Service](helm/standalone-durable.md) if one pod is still enough, but the service is now real
@@ -154,14 +154,7 @@ That is a contributor path, not the primary end-user path.
 
 ## What to do after install
 
-After any scenario install:
-
-- check pod readiness
-- check the service or ingress address
-- hit `/healthz`
-- confirm the configured upstream server shows as healthy
-
-For example:
+After any scenario install: check pod readiness, check the service or ingress address, hit `/healthz`, and confirm the configured upstream server shows as healthy.
 
 ```bash
 kubectl get pods -n remote-mcp-adapter
@@ -177,4 +170,3 @@ kubectl logs -n remote-mcp-adapter deploy/remote-mcp-adapter
 - **Next:** [Choose a Shape](helm/choose-a-shape.md) — decide which Helm story actually fits before you install.
 - **See also:** [Deployment](../deployment.md) — deployment overview and path selection.
 - **See also:** [Configuration](../configuration.md) — choose the runtime behavior that fits the cluster shape you picked.
-

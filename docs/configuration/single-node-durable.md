@@ -1,6 +1,6 @@
 # Single-Node Durable Scenario
 
-**What you'll learn here:** how to configure the adapter for a single durable node, which knobs matter when you want sessions and metadata to survive restarts, and which limits are worth setting before you call something production-ready.
+One node, persistent state, real limits. More serious than local dev, without the Redis and multi-pod coordination of a distributed setup.
 
 ---
 
@@ -50,12 +50,7 @@ core:
   code_mode_enabled: false
 ```
 
-Why:
-
-- `host: "0.0.0.0"` is still the practical default in containers and services.
-- `public_base_url` should be set once clients access the adapter through a real hostname or reverse proxy.
-- `allow_artifacts_download: true` is reasonable here because you are now operating a real service rather than a throwaway dev stack.
-- `code_mode_enabled: false` remains the safest baseline unless you specifically want a reduced tool surface.
+`host: "0.0.0.0"` is still the practical default in containers and services. `public_base_url` should be set once clients access the adapter through a real hostname or reverse proxy. `allow_artifacts_download: true` is reasonable here because you are now operating a real service rather than a throwaway dev stack. `code_mode_enabled: false` remains the safest baseline unless you specifically want a reduced tool surface.
 
 If your users call `<server_id>_get_upload_url(...)`, this is not just a nice extra. It is the setting that makes the returned upload URL point at the real public address instead of an internal container or host address.
 
@@ -70,11 +65,7 @@ core:
     signed_upload_ttl_seconds: 300
 ```
 
-Why:
-
-- once the adapter is reachable over a network, auth should stop being optional
-- signed upload URLs should last long enough for normal user workflows, but not forever
-- storing the token in an environment variable keeps secrets out of committed config
+Once the adapter is reachable over a network, auth should stop being optional. Signed upload URLs should last long enough for normal user workflows, but not forever. Storing the token in an environment variable keeps secrets out of committed config.
 
 ### State persistence
 
@@ -89,12 +80,7 @@ state_persistence:
       enabled: true
 ```
 
-Why:
-
-- `disk` is the right default for a durable single-node deployment
-- SQLite is simple, local, and reliable enough for one adapter process
-- `fail_closed` is safer than pretending persistence is healthy when it is not
-- an explicit `local_path` makes the durability location obvious to operators
+`disk` is the right default for a durable single-node deployment. SQLite is simple, local, and reliable enough for one adapter process. `fail_closed` is safer than pretending persistence is healthy when it is not. An explicit `local_path` makes the durability location obvious to operators.
 
 ### Storage
 
@@ -107,12 +93,7 @@ storage:
   orphan_sweeper_grace_seconds: 300
 ```
 
-Why:
-
-- `root` should point at durable mounted storage shared with upstreams
-- `file` locking is appropriate for one-node durable deployments
-- `max_size` puts a real ceiling on disk growth
-- orphan cleanup should stay on unless you have a very specific reason to disable it
+`root` should point at durable mounted storage shared with upstreams. `file` locking is appropriate for one-node durable deployments. `max_size` puts a real ceiling on disk growth. Orphan cleanup should stay on unless you have a very specific reason to disable it.
 
 ### Sessions, uploads, and artifacts
 
@@ -137,12 +118,7 @@ artifacts:
   expose_as_resources: true
 ```
 
-Why:
-
-- unlike local dev, this profile should set real limits
-- `max_active`, `max_total_session_size`, and `max_per_session` protect the node from silent exhaustion
-- `require_sha256: true` is a sensible production default for upload integrity
-- `allow_revival: true` improves user experience during reconnects and restarts on a single node too
+Unlike local dev, this profile should set real limits. `max_active`, `max_total_session_size`, and `max_per_session` protect the node from silent exhaustion. `require_sha256: true` is a sensible production default for upload integrity. `allow_revival: true` improves user experience during reconnects and restarts on a single node too.
 
 ### Telemetry
 
@@ -151,11 +127,7 @@ telemetry:
   enabled: false
 ```
 
-Why:
-
-- telemetry is still optional here
-- keep it off unless you already have an OTel sink or a clear operational reason to enable it
-- you can add it later without changing the basic durability story
+Telemetry is still optional here. Keep it off unless you already have an OTel sink or a clear operational reason to enable it. You can add it later without changing the basic durability story.
 
 ### Servers
 
@@ -181,11 +153,7 @@ servers:
           mode: "regex"
 ```
 
-Why:
-
-- the server model does not fundamentally change
-- what changes is that the surrounding storage, auth, persistence, and limits are no longer casual
-- by this stage you should be intentional about which tools are upload consumers and artifact producers
+The server model does not fundamentally change. What changes is that the surrounding storage, auth, persistence, and limits are no longer casual. By this stage you should be intentional about which tools are upload consumers and artifact producers.
 
 ---
 
@@ -321,6 +289,6 @@ When that happens, the next likely profile is:
 
 - **Back to:** [Configuration](../configuration.md) — overview and scenario index.
 - **Previous scenario:** [Local Dev Scenario](local-dev.md) — simplest starting point.
-- **See also:** [Security](../security.md) — auth and signed uploads.
+- **See also:** [Security](../security/index.md) — auth and signed uploads.
 - **See also:** [Config Reference](config-reference.md) — exact field behavior and defaults.
 - **Next scenario:** [Distributed Production Scenario](distributed-production.md) — add shared state and storage for multi-replica deployments.

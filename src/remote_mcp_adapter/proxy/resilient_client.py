@@ -84,6 +84,7 @@ class ResilientClient(Client):
         default_timeout: float | None = None,
         session_termination_retries: int = 1,
         metadata_cache_ttl_seconds: int = 30,
+        bypass_list_tools_cache: bool = False,
         **kwargs: Any,
     ):
         """Initialize the resilient client.
@@ -93,6 +94,8 @@ class ResilientClient(Client):
             default_timeout: Default tool-call timeout in seconds.
             session_termination_retries: Max reconnect attempts on session loss.
             metadata_cache_ttl_seconds: TTL for cached metadata responses.
+            bypass_list_tools_cache: Whether ``list_tools`` should skip TTL
+                caching even when other metadata calls stay cached.
             **kwargs: Keyword arguments forwarded to ``Client``.
         """
         super().__init__(*args, **kwargs)
@@ -100,6 +103,7 @@ class ResilientClient(Client):
         self._session_termination_retries = max(0, session_termination_retries)
         self._reconnect_lock = asyncio.Lock()
         self._metadata_cache_ttl_seconds = max(0, metadata_cache_ttl_seconds)
+        self._bypass_list_tools_cache = bool(bypass_list_tools_cache)
         self._metadata_cache: dict[str, tuple[float, Any]] = {}
         self._metadata_cache_lock = asyncio.Lock()
         self._metadata_fetch_locks: dict[str, asyncio.Lock] = {}
@@ -324,8 +328,17 @@ class ResilientClient(Client):
 
     async def list_tools(self):  # type: ignore[override]
         """List tools with TTL caching and session-termination retry."""
+        if self._bypass_list_tools_cache:
+            return await self.list_tools_uncached()
         return await self._call_with_cached_session_termination_retry(
             cache_key=_LIST_TOOLS_CACHE_KEY,
+            operation_name="list_tools",
+            call_factory=super().list_tools,
+        )
+
+    async def list_tools_uncached(self):
+        """List tools without using the metadata TTL cache."""
+        return await self._call_with_session_termination_retry(
             operation_name="list_tools",
             call_factory=super().list_tools,
         )

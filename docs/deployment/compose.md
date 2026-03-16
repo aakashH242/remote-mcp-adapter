@@ -1,6 +1,6 @@
 # Deploy with Docker Compose
 
-**What you'll learn here:** what the repository's Compose setup includes, what you need before you run it, how to bring it up cleanly, and what to verify once it is running.
+What the repository's Compose setup includes, what you need before you run it, and how to bring it up and verify it.
 
 ---
 
@@ -79,7 +79,7 @@ Check health with:
 curl http://localhost:8932/healthz
 ```
 
-If the adapter reports `degraded` for a short time right after startup, that usually means the upstream is still coming up.
+If the adapter reports `degraded` for a short time right after startup, that usually means the upstream is still coming up. Wait a few seconds and check again.
 
 ---
 

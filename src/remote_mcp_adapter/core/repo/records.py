@@ -6,7 +6,9 @@ import asyncio
 from dataclasses import dataclass, field
 import time
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
+
+from ...session_integrity.models import SessionTrustContext
 
 
 def now_ts() -> float:
@@ -83,6 +85,9 @@ class SessionState:
     in_flight: int = 0
     uploads: dict[str, UploadRecord] = field(default_factory=dict)
     artifacts: dict[str, ArtifactRecord] = field(default_factory=dict)
+    trust_context: SessionTrustContext | None = None
+    tool_definition_baseline: ToolDefinitionBaseline | None = None
+    tool_definition_drift_summary: ToolDefinitionDriftSummary | None = None
     lock: asyncio.Lock = field(default_factory=asyncio.Lock)
 
     def touch(self, ts: float | None = None) -> None:
@@ -100,3 +105,50 @@ class SessionTombstone:
 
     state: SessionState
     expires_at: float
+    terminal_reason: str | None = None
+
+
+@dataclass(slots=True)
+class ToolDefinitionSnapshot:
+    """Pinned canonical snapshot of one client-visible tool definition."""
+
+    name: str
+    canonical_hash: str
+    payload: dict[str, Any]
+
+
+@dataclass(slots=True)
+class ToolDefinitionBaseline:
+    """Pinned tool-definition baseline for one adapter session."""
+
+    established_at: float
+    tools: dict[str, ToolDefinitionSnapshot] = field(default_factory=dict)
+
+
+@dataclass(slots=True)
+class ToolDefinitionDriftSummary:
+    """Last detected tool-definition drift summary for one adapter session."""
+
+    detected_at: float
+    mode: Literal["warn", "block"]
+    block_strategy: Literal["error", "baseline_subset"]
+    changed_tools: list[str] = field(default_factory=list)
+    new_tools: list[str] = field(default_factory=list)
+    removed_tools: list[str] = field(default_factory=list)
+    changed_fields: dict[str, list[str]] = field(default_factory=dict)
+    preview: str | None = None
+
+    def fingerprint(self) -> tuple[tuple[str, ...], tuple[str, ...], tuple[str, ...], str, str, str | None]:
+        """Return a stable tuple used to suppress duplicate drift events.
+
+        Returns:
+            Immutable fingerprint of the drift summary, excluding timestamps.
+        """
+        return (
+            tuple(self.changed_tools),
+            tuple(self.new_tools),
+            tuple(self.removed_tools),
+            self.mode,
+            self.block_strategy,
+            self.preview,
+        )

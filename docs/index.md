@@ -1,11 +1,5 @@
 # Remote MCP Adapter
 
-**What you'll learn here:** what the adapter is, why it exists, when you actually need it, and the easiest way to get started.
-
----
-
-## What it is
-
 Remote MCP Adapter is a gateway for MCP servers that need to work well in remote environments.
 
 It sits between your MCP client and one or more upstream MCP servers and smooths over the biggest pain point in remote MCP setups: file handling.
@@ -162,7 +156,7 @@ Choose the path that matches what you need next:
 
     - [Configuration](configuration.md)
     - [Config Reference](configuration/config-reference.md)
-    - [Security](security.md)
+    - [Security](security/index.md)
     - [Health](health.md)
     - [Troubleshooting](troubleshooting.md)
 
